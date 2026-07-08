@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRILink Prime — Digital Banking Terminal</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js" defer></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ═══════════════════════════════════════════════════════════════
+   BRILINK PRIME — DESIGN TOKENS
+   Palette: deep ledger-navy + brass/gold foil + emerald settlement
+   Display: Fraunces (editorial, statement-like) · Body: Inter
+   Numerals/IDs: JetBrains Mono
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  /* Core navy ladder */
+  --navy-950:#050B18; --navy-900:#0A1428; --navy-850:#0E1B36; --navy-800:#122142;
+  --navy-700:#1B2E56; --navy-600:#25406F;
+
+  /* Brand blue (BRI heritage blue) */
+  --blue-700:#123A9C; --blue-600:#1746C4; --blue-500:#2A5EE0; --blue-400:#5E86EC; --blue-lt:#EEF3FE;
+
+  /* Brass / gold foil accent — premium, sparing use */
+  --gold-600:#9C7A1E; --gold-500:#BD9530; --gold-400:#D8B95C; --gold-300:#EAD599; --gold-lt:#FBF4E1;
+
+  /* Settlement colors */
+  --emerald-700:#0B5E43; --emerald-600:#0F8058; --emerald-500:#159A6B; --emerald-lt:#E7F7EF;
+  --rose-700:#8C2323; --rose-600:#B23434; --rose-500:#C94545; --rose-lt:#FBECEC;
+  --amber-600:#9A6B0C; --amber-500:#C4900F; --amber-lt:#FBF1DD;
+  --violet-600:#5B3FA0; --violet-500:#7658C4; --violet-lt:#F2EEFC;
+
+  /* Neutral paper ladder */
+  --paper-0:#FFFFFF; --paper-25:#FCFCFD; --paper-50:#F6F7FA; --paper-100:#EEF0F4;
+  --ink-950:#0B1220; --ink-900:#131B2C; --ink-700:#33405A; --ink-500:#66738F; --ink-400:#8993AB;
+  --ink-300:#C4CADA; --ink-200:#DEE2EC; --ink-100:#EDEFF5;
+
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:26px;
+  --shadow-1:0 1px 2px rgba(11,18,32,.06), 0 1px 3px rgba(11,18,32,.08);
+  --shadow-2:0 6px 16px rgba(11,18,32,.08), 0 2px 6px rgba(11,18,32,.06);
+  --shadow-3:0 20px 48px rgba(8,14,28,.20), 0 6px 20px rgba(8,14,28,.12);
+  --foil:linear-gradient(115deg, var(--gold-300) 0%, var(--gold-500) 28%, var(--gold-300) 45%, var(--gold-600) 62%, var(--gold-400) 100%);
+  --serif:'Fraunces', Georgia, serif;
+  --sans:'Inter', system-ui, -apple-system, sans-serif;
+  --mono:'JetBrains Mono', 'SF Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:var(--sans);background:var(--paper-50);color:var(--ink-900);font-size:14px;min-height:100vh;line-height:1.45}
+::selection{background:var(--gold-300);color:var(--navy-950)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ink-200);border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-300)}
+button{font-family:inherit}
+
+/* ═══ LOGIN ═══════════════════════════════════════════════════ */
+#loginScreen{position:fixed;inset:0;background:
+  radial-gradient(1100px 700px at 15% -10%, rgba(42,94,224,.35), transparent 60%),
+  radial-gradient(900px 600px at 105% 105%, rgba(189,149,48,.25), transparent 55%),
+  linear-gradient(160deg, var(--navy-950) 0%, var(--navy-900) 45%, var(--navy-850) 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px}
+#loginScreen::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:42px 42px;
+  mask-image:radial-gradient(circle at 30% 30%, black, transparent 70%)}
+.login-wrap{position:relative;display:flex;width:900px;max-width:100%;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--shadow-3);border:1px solid rgba(255,255,255,.08)}
+.login-left{flex:1.15;position:relative;background:linear-gradient(155deg,var(--navy-900),var(--navy-700) 75%);padding:52px 44px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.login-left::after{content:'';position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, rgba(216,185,92,.22), transparent 70%)}
+.login-left-brand{display:flex;align-items:center;gap:13px;margin-bottom:46px;position:relative;z-index:1}
+.login-left-icon{width:46px;height:46px;background:var(--foil);border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:17px;font-weight:700;color:var(--navy-950);box-shadow:0 6px 18px rgba(189,149,48,.35)}
+.login-left-name{color:#fff;font-size:15px;font-weight:700;letter-spacing:.01em}
+.login-left-name small{display:block;font-size:10px;font-weight:500;color:rgba(255,255,255,.45);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.login-left-tagline{font-family:var(--serif);color:#fff;font-size:33px;font-weight:600;line-height:1.22;margin-bottom:16px;letter-spacing:-.01em;position:relative;z-index:1}
+.login-left-tagline em{font-style:italic;color:var(--gold-300)}
+.login-left-sub{color:rgba(255,255,255,.55);font-size:13.5px;line-height:1.7;max-width:380px;position:relative;z-index:1}
+.login-left-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:34px;position:relative;z-index:1}
+.login-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:var(--r-md);padding:13px 15px;backdrop-filter:blur(6px)}
+.login-stat-num{font-family:var(--serif);font-size:21px;font-weight:600;color:#fff}
+.login-stat-lbl{font-size:10.5px;color:rgba(255,255,255,.45);margin-top:3px;letter-spacing:.02em}
+.login-right{width:378px;background:var(--paper-0);padding:46px 40px;display:flex;flex-direction:column}
+.login-right-eyebrow{font-size:10.5px;font-weight:700;color:var(--gold-600);text-transform:uppercase;letter-spacing:.14em;margin-bottom:10px}
+.login-right-title{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--ink-950);letter-spacing:-.01em;margin-bottom:5px}
+.login-right-sub{font-size:12.5px;color:var(--ink-400);margin-bottom:26px}
+.login-err{background:var(--rose-lt);color:var(--rose-700);border:1px solid #f3caca;border-radius:var(--r-sm);padding:10px 13px;font-size:12px;font-weight:600;margin-bottom:16px;display:none}
+.lg{margin-bottom:15px}
+.lg label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-500);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.lg input{width:100%;font-family:inherit;font-size:14px;color:var(--ink-900);background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:11px 13px;outline:none;transition:all .15s}
+.lg input:focus{border-color:var(--blue-500);background:#fff;box-shadow:0 0 0 4px rgba(42,94,224,.1)}
+.login-btn{width:100%;background:linear-gradient(135deg,var(--navy-900),var(--blue-600));color:#fff;border:none;border-radius:var(--r-sm);padding:13px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;transition:all .18s;box-shadow:0 8px 20px rgba(18,58,156,.35);letter-spacing:.01em;position:relative;overflow:hidden}
+.login-btn::after{content:'';position:absolute;inset:0;background:var(--foil);opacity:0;transition:opacity .2s}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(18,58,156,.45)}
+.login-btn span{position:relative;z-index:1}
+.login-hint{font-size:10.5px;color:var(--ink-400);text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--paper-100);line-height:1.6}
+.login-hint b{color:var(--ink-700)}
+
+/* ═══ APP SHELL ═══════════════════════════════════════════════ */
+#appScreen{display:none;height:100vh;overflow:hidden}
+.app-shell{display:flex;height:100vh}
+
+/* RAIL (left sidebar navigation, banking-dashboard style) */
+.rail{width:232px;flex-shrink:0;background:linear-gradient(185deg,var(--navy-950),var(--navy-900) 70%);display:flex;flex-direction:column;height:100vh;position:relative}
+.rail::after{content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(216,185,92,.18) 30%,rgba(216,185,92,.18) 70%,transparent)}
+.rail-brand{display:flex;align-items:center;gap:9px;padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:6px}
+.rail-icon{width:28px;height:28px;background:var(--foil);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:11px;font-weight:700;color:var(--navy-950);flex-shrink:0;box-shadow:0 3px 8px rgba(189,149,48,.3)}
+.rail-brand-txt{overflow:hidden}
+.rail-name{color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+.rail-branch{color:rgba(255,255,255,.4);font-size:9.5px;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-nav{display:flex;flex-direction:column;gap:2px;padding:10px 12px;flex:1;overflow-y:auto}
+.rail-section-lbl{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.13em;padding:14px 10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb{background:transparent;border:none;color:rgba(255,255,255,.55);padding:10px 12px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:11px;text-align:left;width:100%;position:relative;white-space:nowrap;overflow:hidden;text-decoration:none;box-sizing:border-box}
+.nb span:not(.nb-ic){overflow:hidden;text-overflow:ellipsis}
+.nb .nb-ic{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:.85}
+.nb:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.nb.active{background:linear-gradient(90deg,rgba(216,185,92,.16),rgba(216,185,92,.04));color:#fff;font-weight:700}
+.nb.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--foil)}
+.rail-foot{padding:14px;border-top:1px solid rgba(255,255,255,.07)}
+.tb-time{color:rgba(255,255,255,.35);font-size:10.5px;font-weight:500;padding:0 4px 10px;font-family:var(--mono);letter-spacing:.02em}
+.tb-user{display:flex;align-items:center;gap:9px;padding:8px;border-radius:12px;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);transition:all .15s;position:relative}
+.tb-user:hover{background:rgba(255,255,255,.08)}
+.tb-av{width:32px;height:32px;border-radius:9px;background:var(--foil);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:13px;font-weight:700;color:var(--navy-950);flex-shrink:0}
+.tb-uname{color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-urole{color:rgba(255,255,255,.4);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-menu{position:absolute;bottom:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:12px;border:1px solid var(--ink-100);box-shadow:var(--shadow-3);min-width:190px;overflow:hidden;display:none}
+.tb-menu.open{display:block}
+.tb-mi{padding:11px 15px;font-size:12.5px;color:var(--ink-700);cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .1s;font-weight:500}
+.tb-mi:hover{background:var(--paper-50)}
+.tb-mi.red{color:var(--rose-600)}
+.tb-msep{height:1px;background:var(--paper-100);margin:2px 0}
+
+/* MAIN AREA */
+.app-main{flex:1;height:100vh;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.page{display:none;height:100%;overflow:hidden}
+.page.active{display:flex;flex-direction:column;height:100%}
+
+/* ═══ KASIR LAYOUT ══════════════════════════════════════════ */
+.kasir-layout{display:flex;height:100%;overflow:hidden}
+.resizer{width:6px;background:transparent;cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
+.resizer::before{content:'';position:absolute;top:0;bottom:0;left:2.5px;width:1px;background:var(--ink-100);transition:background .15s}
+.resizer:hover::before,.resizer.dragging::before{background:var(--gold-500);width:2px;left:2px}
+.resizer::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:26px;border-radius:3px;background:var(--ink-200);pointer-events:none}
+.resizer:hover::after,.resizer.dragging::after{background:var(--gold-500)}
+
+/* RAIL RESIZER — drag to resize the left navigation sidebar */
+.rail-resizer{width:6px;background:var(--navy-950);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
+.rail-resizer::before{content:'';position:absolute;top:0;bottom:0;left:2.5px;width:1px;background:rgba(255,255,255,.08);transition:background .15s}
+.rail-resizer:hover::before,.rail-resizer.dragging::before{background:var(--gold-500);width:2px;left:2px}
+.rail-resizer::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:26px;border-radius:3px;background:rgba(255,255,255,.18);pointer-events:none}
+.rail-resizer:hover::after,.rail-resizer.dragging::after{background:var(--gold-500)}
+
+/* LEDGER SIDEBAR FORM */
+.sb{background:var(--paper-0);border-right:1px solid var(--ink-100);display:flex;flex-direction:column;height:100%;overflow:hidden;flex-shrink:0;width:520px;min-width:340px;max-width:75vw}
+.sb-head{padding:22px 24px 18px;background:linear-gradient(150deg,var(--navy-950),var(--navy-800));position:relative;overflow:hidden}
+.sb-head::after{content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, rgba(216,185,92,.16), transparent 70%)}
+.sb-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;position:relative;z-index:1}
+.sb-title{font-family:var(--serif);font-size:16px;font-weight:600;color:#fff;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.sb-title-badge{font-size:9px;font-weight:700;background:rgba(21,154,107,.22);color:#6ee7b7;padding:3px 9px;border-radius:20px;letter-spacing:.08em;border:1px solid rgba(110,231,183,.25)}
+.sb-title-badge::before{content:'●';margin-right:4px;font-size:7px;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.3}}
+.sb-meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;position:relative;z-index:1}
+.sb-meta-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);padding:9px 12px}
+.sb-meta-lbl{font-size:9px;font-weight:700;color:rgba(255,255,255,.38);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.sb-meta-val{font-size:13px;font-weight:700;color:#fff;letter-spacing:-.01em;font-family:var(--mono)}
+.sb-body{flex:1;overflow-y:auto;padding:20px 24px}
+.sb-foot{padding:16px 24px;border-top:1px solid var(--ink-100);background:var(--paper-25)}
+
+/* Form elements */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-500);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.opt{font-weight:500;color:var(--ink-300);text-transform:none;letter-spacing:0;margin-left:4px;font-size:10px}
+.fi{width:100%;font-family:inherit;font-size:13px;color:var(--ink-900);background:#fff;border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:10px 13px;outline:none;transition:all .15s}
+.fi:focus{border-color:var(--blue-500);box-shadow:0 0 0 3.5px rgba(42,94,224,.1);background:#fff}
+.fi:read-only{background:var(--paper-50);color:var(--ink-500);cursor:default}
+textarea.fi{resize:none;height:64px;font-family:inherit}
+.fi-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fi-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.money-wrap{position:relative}
+.money-pre{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;width:44px;font-size:11px;font-weight:800;color:var(--ink-500);pointer-events:none;border-right:1.5px solid var(--ink-200);letter-spacing:.02em}
+.money-inp{padding-left:52px!important;font-size:16px!important;font-weight:700!important;color:var(--ink-950)!important;letter-spacing:-.01em;font-family:var(--mono)!important}
+.money-inp::placeholder{font-size:13px;font-weight:400;color:var(--ink-300);font-family:var(--sans)}
+.money-inp:focus{border-color:var(--blue-500)}
+.nominal-big .money-pre{width:52px;font-size:13px;background:var(--paper-50)}
+.nominal-big .money-inp{font-size:21px!important;padding:13px 13px 13px 60px!important;height:55px;background:var(--paper-50);border-width:2px}
+.nominal-big .money-inp:focus{background:#fff;border-color:var(--blue-500)}
+
+/* RFID scan zone */
+.rfid-zone{background:linear-gradient(135deg,#F0F6FF,#E4EEFC);border:2px dashed #A9C2ED;border-radius:var(--r-lg);padding:15px 16px;cursor:pointer;transition:all .2s;position:relative;margin-bottom:14px}
+.rfid-zone:hover{border-color:var(--blue-500);background:linear-gradient(135deg,#E4EEFC,#D3E2FA)}
+.rfid-zone.found{border-color:var(--emerald-500);border-style:solid;background:linear-gradient(135deg,#F0FBF6,#DFF5E9);cursor:default}
+.rfid-zone.scanning{border-color:var(--blue-500);animation:rfidpulse 1s ease-in-out infinite}
+@keyframes rfidpulse{0%,100%{opacity:1}50%{opacity:.6}}
+.rfid-default{display:flex;align-items:center;gap:12px}
+.rfid-default-icon{width:40px;height:40px;border-radius:10px;background:rgba(42,94,224,.12);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.rfid-default-text .t1{font-size:13px;font-weight:700;color:var(--blue-700)}
+.rfid-default-text .t2{font-size:11px;color:var(--blue-700);opacity:.6;margin-top:1px}
+.rfid-found{display:flex;align-items:center;gap:12px}
+.rfid-found-av{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--violet-600),var(--violet-500));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
+.rfid-found-info .t1{font-size:14px;font-weight:700;color:var(--ink-950)}
+.rfid-found-info .t2{font-size:11px;color:var(--ink-400);margin-top:2px;font-family:var(--mono)}
+.rfid-found-info .t3{font-size:12px;font-weight:700;color:var(--violet-600);margin-top:4px}
+.rfid-clear{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.06);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;color:var(--ink-500);font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.rfid-clear:hover{background:rgba(194,69,69,.12);color:var(--rose-600)}
+.rfid-search-row{display:flex;gap:6px;margin-top:10px}
+.rfid-search-row input{flex:1;font-family:inherit;font-size:12px;background:#fff;border:1.5px solid #A9C2ED;border-radius:var(--r-sm);padding:7px 10px;outline:none}
+.rfid-search-row input:focus{border-color:var(--blue-500)}
+.rfid-search-row button{background:var(--blue-600);color:#fff;border:none;border-radius:var(--r-sm);padding:7px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* JENIS grid */
+.jenis-scroll{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.jb{border:1.5px solid var(--ink-200);background:#fff;border-radius:var(--r-sm);padding:9px 10px;font-size:11.5px;font-weight:600;color:var(--ink-700);cursor:pointer;text-align:left;display:flex;align-items:center;gap:7px;transition:all .15s;line-height:1.3}
+.jb:hover{border-color:var(--blue-400);color:var(--blue-600);background:var(--blue-lt)}
+.jb.active{border-color:var(--blue-600);background:linear-gradient(135deg,var(--blue-lt),#dbe6fd);color:var(--blue-700);font-weight:700;box-shadow:0 0 0 2px rgba(23,70,196,.12)}
+.jb-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center}
+
+/* CHANNEL BADGE (bank indicator, used in tables/cards) */
+.ch-badge{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;color:#fff}
+.ch-badge.bri{background:linear-gradient(135deg,#0A3D91,#1746C4)}
+.ch-badge.transfer{background:linear-gradient(135deg,#0F6E4F,#15A36F)}
+
+/* BANK PICKER — pick a channel by tapping its logo */
+.bank-picker{display:flex;gap:9px}
+.bkp-btn{flex:1;border:2px solid var(--ink-200);background:#fff;border-radius:var(--r-lg);padding:10px 6px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;transition:all .18s}
+.bkp-btn:hover{border-color:var(--ink-300);transform:translateY(-1px);box-shadow:var(--shadow-1)}
+.bkp-btn.active{border-color:var(--gold-500);background:var(--gold-lt);box-shadow:0 4px 14px rgba(156,122,30,.18);transform:translateY(-1px)}
+.bkp-logo{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;letter-spacing:.01em;box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.bkp-logo.bri{background:linear-gradient(135deg,#0A3D91,#1746C4)}
+.bkp-logo.transfer{background:linear-gradient(135deg,#0F6E4F,#15A36F)}
+.bkp-name{font-size:10.5px;font-weight:700;color:var(--ink-500)}
+.bkp-btn.active .bkp-name{color:var(--gold-600)}
+
+/* TOTAL PREVIEW — signature "ledger statement" card */
+.total-preview{background:linear-gradient(150deg,var(--navy-950),var(--navy-800));border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;border:1px solid rgba(216,185,92,.18);position:relative;overflow:hidden}
+.total-preview::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--foil)}
+.total-preview-row{display:flex;justify-content:space-between;align-items:center;padding:2.5px 0}
+.total-preview-row .tp-lbl{font-size:10.5px;color:rgba(255,255,255,.42);font-weight:500}
+.total-preview-row .tp-val{font-size:12px;font-weight:600;color:rgba(255,255,255,.8);font-family:var(--mono)}
+.total-preview-row.main .tp-lbl{font-size:10px;color:var(--gold-300);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.total-preview-row.main .tp-val{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em;font-family:var(--mono)}
+.tp-div{height:1px;background:rgba(255,255,255,.09);margin:7px 0}
+.tp-fee-row{display:flex;justify-content:space-between;align-items:center;padding-top:6px;margin-top:2px;border-top:1px dashed rgba(255,255,255,.12)}
+
+/* SAVE BTN */
+.btn-save{width:100%;background:linear-gradient(135deg,var(--navy-900),var(--blue-600));color:#fff;border:none;border-radius:var(--r-sm);padding:15px;font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;letter-spacing:.01em;transition:all .15s;box-shadow:0 8px 22px rgba(18,58,156,.35)}
+.btn-save:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(18,58,156,.45)}
+.btn-save:active{transform:translateY(0)}
+
+/* DIVIDER / SECTION LABEL */
+.div{height:1px;background:var(--paper-100);margin:16px 0}
+.sec-lbl{font-size:10px;font-weight:800;color:var(--ink-400);text-transform:uppercase;letter-spacing:.11em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--paper-100)}
+
+/* ═══ MAIN PANEL ═══════════════════════════════════════════ */
+.main{padding:24px 26px;overflow-y:auto;height:100%;flex:1;min-width:200px}
+.pg-body{padding:26px 30px;max-width:1320px;overflow-y:auto;height:100%}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.sc{background:#fff;border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--shadow-1);border:1px solid var(--ink-100);position:relative;overflow:hidden;transition:box-shadow .2s}
+.sc:hover{box-shadow:var(--shadow-2)}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.sc.blue::before{background:linear-gradient(90deg,var(--navy-800),var(--blue-500))}
+.sc.green::before{background:linear-gradient(90deg,var(--emerald-700),var(--emerald-500))}
+.sc.amber::before{background:linear-gradient(90deg,var(--gold-600),var(--gold-400))}
+.sc.purple::before{background:linear-gradient(90deg,var(--violet-600),var(--violet-500))}
+.sc-inner{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.sc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.sc-lbl{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.sc-num{font-family:var(--serif);font-size:25px;font-weight:600;color:var(--ink-950);letter-spacing:-.02em;line-height:1}
+.sc-sub{font-size:11px;color:var(--ink-400);margin-top:5px}
+
+/* FILTER */
+.filter-card{background:#fff;border-radius:var(--r-lg);padding:15px 17px;margin-bottom:16px;box-shadow:var(--shadow-1);border:1px solid var(--ink-100)}
+.filter-grid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.fg-f{display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px}
+.fg-f label{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.06em}
+.fg-f input,.fg-f select{font-family:inherit;font-size:12px;color:var(--ink-700);background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:7px 10px;outline:none;transition:all .15s}
+.fg-f input:focus,.fg-f select:focus{border-color:var(--blue-500);background:#fff}
+.btn-export{background:linear-gradient(135deg,var(--emerald-700),var(--emerald-500));color:#fff;border:none;border-radius:var(--r-sm);padding:8px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s;box-shadow:0 3px 10px rgba(15,128,88,.25)}
+.btn-export:hover{transform:translateY(-1px)}
+.btn-clr{background:transparent;color:var(--ink-400);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:7px 12px;font-family:inherit;font-size:12px;cursor:pointer;transition:all .15s;font-weight:600}
+.btn-clr:hover{color:var(--ink-600);border-color:var(--ink-300)}
+
+/* TABLE */
+.tbl-card{background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-1);border:1px solid var(--ink-100);overflow:hidden}
+.tbl-head{padding:16px 20px;border-bottom:1px solid var(--ink-100);display:flex;align-items:center;justify-content:space-between;background:var(--paper-25)}
+.tbl-title{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink-950);letter-spacing:-.01em}
+.tbl-ct{font-size:11px;font-weight:700;color:var(--ink-400);background:var(--paper-100);border-radius:20px;padding:3px 10px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--paper-25);font-size:9.5px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.07em;padding:11px 14px;text-align:left;border-bottom:1px solid var(--ink-200);white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:11px 14px;border-bottom:1px solid var(--ink-100);font-size:13px;color:var(--ink-700);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBFF}
+.trx-no{font-family:var(--mono);font-size:11px;color:var(--ink-500);font-weight:700;background:var(--paper-100);border-radius:4px;padding:2px 6px}
+.del{background:none;border:none;cursor:pointer;color:var(--ink-300);width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
+.del:hover{color:var(--rose-600);background:var(--rose-lt)}
+.chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.c-blue{background:var(--blue-lt);color:var(--blue-700)}
+.c-green{background:var(--emerald-lt);color:var(--emerald-700)}
+.c-amber{background:var(--amber-lt);color:var(--amber-600)}
+.c-purple{background:var(--violet-lt);color:var(--violet-600)}
+.c-teal{background:#DCFAF3;color:#0B6E5C}
+.c-red{background:var(--rose-lt);color:var(--rose-700)}
+.c-gray{background:var(--paper-100);color:var(--ink-500)}
+.c-indigo{background:#E4E9FC;color:#33379C}
+.c-member{background:var(--gold-lt);color:var(--gold-600);border:1px solid var(--gold-300)}
+.empty{text-align:center;padding:48px;color:var(--ink-400)}
+.empty-ic{font-size:36px;opacity:.3;display:block;margin-bottom:10px}
+
+/* ═══ PAGE HEADER (shared) ═══════════════════════════════════ */
+.pg-top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+.pg-heading{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--ink-950);letter-spacing:-.02em}
+.pg-sub{font-size:13px;color:var(--ink-400);margin-top:4px}
+.pg-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,var(--navy-900),var(--blue-600));color:#fff;border:none;border-radius:var(--r-sm);padding:10px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(18,58,156,.3);transition:all .15s}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(18,58,156,.4)}
+.btn-purple{background:linear-gradient(135deg,var(--violet-600),var(--violet-500));color:#fff;border:none;border-radius:var(--r-sm);padding:10px 18px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(91,63,160,.3);transition:all .15s}
+.btn-purple:hover{transform:translateY(-1px)}
+.msearch{background:#fff;border-radius:var(--r-lg);padding:15px 17px;margin-bottom:16px;box-shadow:var(--shadow-1);border:1px solid var(--ink-100);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.msearch input,.msearch select{font-family:inherit;font-size:13px;border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:8px 11px;outline:none;background:var(--paper-50);flex:1;min-width:150px;transition:all .15s}
+.msearch input:focus,.msearch select:focus{border-color:var(--blue-500);background:#fff}
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:16px}
+
+/* ═══ MEMBER CARD — styled like a real membership / credit card ═══ */
+.mc{background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-1);border:1px solid var(--ink-100);overflow:hidden;transition:all .2s}
+.mc:hover{box-shadow:var(--shadow-2);transform:translateY(-2px)}
+.mc-header{padding:18px;position:relative;overflow:hidden;min-height:96px;display:flex;flex-direction:column;justify-content:space-between}
+.mc-header.regular{background:linear-gradient(125deg,#3A4459,#232B3B)}
+.mc-header.silver{background:linear-gradient(125deg,#8B95A6,#525C6E)}
+.mc-header.gold{background:linear-gradient(125deg,#D8B95C,#9C7A1E)}
+.mc-header.platinum{background:linear-gradient(125deg,#2B2354,#100B26)}
+.mc-header.diamond{background:linear-gradient(125deg,#7DD8E8,#2E6FA8 55%,#153A63)}
+.mc-header.diamond::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), transparent 45%);pointer-events:none}
+.mc-header::after{content:'';position:absolute;right:-30px;bottom:-40px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.14), transparent 70%)}
+.mc-toprow{display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:1}
+.mc-chip{width:30px;height:22px;border-radius:5px;background:linear-gradient(135deg,#F3DFA0,#C9A445);position:relative;z-index:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.mc-tier-badge{font-size:9px;font-weight:800;padding:4px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em}
+.tb-regular{background:rgba(255,255,255,.14);color:rgba(255,255,255,.8)}
+.tb-silver{background:rgba(255,255,255,.2);color:#fff}
+.tb-gold{background:rgba(46,32,4,.25);color:#3a2a05}
+.tb-platinum{background:rgba(196,181,253,.2);color:#e4d9ff}
+.tb-diamond{background:rgba(255,255,255,.3);color:#0a3a5c}
+.mc-cardnum{font-family:var(--mono);font-size:13px;color:rgba(255,255,255,.85);letter-spacing:.12em;position:relative;z-index:1;margin-top:8px}
+.mc-header.gold .mc-cardnum{color:rgba(30,22,2,.75)}
+.mc-bottomrow{display:flex;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
+.mc-name{color:#fff;font-size:13.5px;font-weight:700;letter-spacing:.01em}
+.mc-header.gold .mc-name{color:#241a03}
+.mc-av{width:0;height:0} /* legacy hook, superseded by chip design */
+.mc-body{padding:13px 16px}
+.mc-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--paper-100)}
+.mc-row:last-of-type{border-bottom:none}
+.mc-rl{font-size:11px;color:var(--ink-400)}
+.mc-rv{font-size:12px;font-weight:700;color:var(--ink-700)}
+.mc-rv.pts{color:var(--violet-600);font-size:14px;font-family:var(--serif)}
+.rfid-pill{font-family:var(--mono);font-size:10px;background:var(--paper-100);border-radius:4px;padding:2px 6px;color:var(--ink-500)}
+.progress-wrap{margin-top:11px}
+.progress-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-400);margin-bottom:5px}
+.progress-track{background:var(--paper-100);border-radius:20px;height:5px;overflow:hidden}
+.progress-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--violet-600),var(--violet-500));transition:width .6s ease}
+.mc-actions{padding:10px 14px;border-top:1px solid var(--paper-100);display:flex;gap:6px;flex-wrap:wrap}
+.bsm{font-family:inherit;font-size:11px;font-weight:700;padding:5px 11px;border-radius:7px;border:none;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px}
+.bsm-blue{background:var(--blue-lt);color:var(--blue-700)}
+.bsm-blue:hover{background:#dbe6fd}
+.bsm-green{background:var(--emerald-lt);color:var(--emerald-700)}
+.bsm-green:hover{background:#c9f0da}
+.bsm-red{background:var(--rose-lt);color:var(--rose-600)}
+.bsm-red:hover{background:#f6d4d4}
+.bsm-purple{background:var(--violet-lt);color:var(--violet-600)}
+.bsm-purple:hover{background:#e5ddf9}
+.bsm-amber{background:var(--amber-lt);color:var(--amber-600)}
+.bsm-amber:hover{background:#f7e6bb}
+
+/* ═══ MODALS ═══════════════════════════════════════════════ */
+.mo{position:fixed;inset:0;background:rgba(6,11,24,.6);z-index:8000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.mo.open{display:flex}
+.md{background:#fff;border-radius:var(--r-xl);padding:30px;width:100%;max-width:500px;box-shadow:var(--shadow-3);max-height:90vh;overflow-y:auto}
+.md-title{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink-950);letter-spacing:-.01em;margin-bottom:22px;display:flex;align-items:center;gap:10px}
+.md-foot{display:flex;gap:8px;margin-top:24px;justify-content:flex-end}
+.btn-ok{background:linear-gradient(135deg,var(--navy-900),var(--blue-600));color:#fff;border:none;border-radius:var(--r-sm);padding:10px 22px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-ok:hover{transform:translateY(-1px)}
+.btn-cancel{background:transparent;color:var(--ink-500);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:10px 18px;font-family:inherit;font-size:13px;cursor:pointer;transition:all .15s;font-weight:600}
+.btn-cancel:hover{border-color:var(--ink-300);color:var(--ink-700)}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* HISTORY MODAL */
+.hist-banner{background:linear-gradient(150deg,var(--navy-950),var(--navy-800));border-radius:var(--r-lg);padding:18px;margin-bottom:16px;border:1px solid rgba(216,185,92,.18)}
+.hist-row{padding:11px 0;border-bottom:1px solid var(--paper-100);display:flex;gap:12px;align-items:flex-start}
+.hist-row:last-child{border-bottom:none}
+.hist-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--paper-100)}
+.hist-l{flex:1}
+.hist-no{font-size:11px;font-family:var(--mono);color:var(--ink-400)}
+.hist-jns{font-size:13px;font-weight:700;color:var(--ink-800)}
+.hist-tgl{font-size:11px;color:var(--ink-400);margin-top:1px}
+.hist-r{text-align:right;flex-shrink:0}
+.hist-nom{font-size:13px;font-weight:700;color:var(--ink-950);font-family:var(--mono)}
+.hist-pts{font-size:11px;font-weight:700;color:var(--violet-600);margin-top:2px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy-950);color:#fff;padding:12px 18px;border-radius:var(--r-lg);font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:9999;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-3);border:1px solid rgba(216,185,92,.2)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{background:var(--emerald-700);border-color:rgba(255,255,255,.15)}
+.toast.err{background:var(--rose-700);border-color:rgba(255,255,255,.15)}
+
+/* ═══ PAGER ═══════════════════════════════════════════════ */
+.pager{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--paper-100);font-size:12px;color:var(--ink-500)}
+.pager button{background:var(--paper-100);border:none;border-radius:6px;padding:5px 10px;margin:0 2px;cursor:pointer;font-family:inherit;font-size:12px;color:var(--ink-600);transition:all .15s;font-weight:600}
+.pager button:hover:not(:disabled){background:var(--ink-200)}
+.pager button.active{background:var(--blue-600);color:#fff}
+.pager button:disabled{opacity:.35;cursor:default}
+
+/* ═══ EXTRA ═══════════════════════════════════════════════ */
+.edit-banner{display:none;background:var(--amber-lt);border:1px solid var(--gold-300);color:var(--gold-600);font-size:12px;font-weight:700;padding:10px 15px;border-radius:11px;margin:0 24px 14px;align-items:center;justify-content:space-between;gap:8px}
+.edit-banner button{background:none;border:none;color:var(--gold-600);text-decoration:underline;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
+
+/* ═══ KAS / SALDO ═══════════════════════════════════════════ */
+.kas-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kas-card{background:#fff;border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-1);border:1px solid var(--ink-100)}
+.kas-lbl{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px}
+.kas-num{font-family:var(--serif);font-size:23px;font-weight:600;color:var(--ink-950);letter-spacing:-.02em}
+.limit-card{background:#fff;border-radius:var(--r-lg);padding:20px 22px;box-shadow:var(--shadow-1);border:1px solid var(--ink-100);margin-bottom:20px}
+
+/* BACKUP STATUS CARD */
+.backup-status-card{display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:var(--r-lg);box-shadow:var(--shadow-1);border:1.5px solid var(--ink-100);margin-bottom:10px;transition:all .2s}
+.backup-status-card.ok{background:var(--emerald-lt);border-color:#bfe8d3}
+.backup-status-card.warn{background:var(--amber-lt);border-color:#f0dba0}
+.backup-status-card.danger{background:var(--rose-lt);border-color:#f3caca}
+.backup-status-icon{font-size:28px;flex-shrink:0}
+.backup-status-title{font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink-950)}
+.backup-status-sub{font-size:12px;color:var(--ink-500);margin-top:3px}
+.limit-track{background:var(--paper-100);border-radius:20px;height:10px;overflow:hidden;margin-top:10px}
+.limit-bar{height:100%;border-radius:20px;transition:width .3s}
+
+/* HERO CASH CARD — the one number staff actually needs */
+.kas-hero{background:linear-gradient(150deg,var(--navy-950),var(--navy-800));border-radius:var(--r-lg);padding:26px 28px;margin-bottom:14px;border:1px solid rgba(216,185,92,.18);position:relative;overflow:hidden}
+.kas-hero::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--foil)}
+.kas-hero-lbl{font-size:11.5px;font-weight:700;color:var(--gold-300);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.kas-hero-num{font-family:var(--serif);font-size:40px;font-weight:600;color:#fff;letter-spacing:-.02em}
+.kas-hero-sub{font-size:12px;color:rgba(255,255,255,.5);margin-top:12px;font-family:var(--mono)}
+.kas-hero.total-modal{background:linear-gradient(150deg,#1a1408,var(--navy-900) 60%);border:1.5px solid rgba(216,185,92,.4)}
+.kas-hero.total-modal::before{background:var(--foil);width:4px}
+.kas-hero.total-modal .kas-hero-lbl{color:var(--gold-300)}
+.kas-hero.total-modal .kas-hero-num{background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+
+/* SECTION HEADING inside kas page */
+.kas-section-title{display:flex;align-items:center;gap:10px;margin:26px 0 14px}
+.kas-section-title:first-child{margin-top:0}
+.kas-section-title h3{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink-950)}
+.kas-section-title span{font-size:11.5px;color:var(--ink-400)}
+.kas-section-title::after{content:'';flex:1;height:1px;background:var(--ink-100)}
+
+/* BANK ACCOUNT CARDS (BRI / Bank Transfer) */
+.bank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.bank-card{border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1);border:1px solid var(--ink-100);background:#fff}
+.bank-card-head{padding:14px 18px;display:flex;align-items:center;gap:10px;position:relative;overflow:hidden}
+.bank-card-head::after{content:'';position:absolute;right:-30px;bottom:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.16), transparent 70%)}
+.bank-card-head.bri{background:linear-gradient(125deg,#0A3D91,#1746C4)}
+.bank-card-head.transfer{background:linear-gradient(125deg,#0F6E4F,#15A36F)}
+.bank-card-badge{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;border:1px solid rgba(255,255,255,.25);position:relative;z-index:1}
+.bank-card-name{color:#fff;font-size:13.5px;font-weight:700;position:relative;z-index:1}
+.bank-card-sub{color:rgba(255,255,255,.6);font-size:10.5px;position:relative;z-index:1}
+.bank-card-body{padding:14px 18px}
+.bank-card-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--paper-100);font-size:12px}
+.bank-card-row:last-child{border-bottom:none}
+.bank-card-row .l{color:var(--ink-400)}
+.bank-card-row .v{font-weight:700;color:var(--ink-800);font-family:var(--mono)}
+.bank-card-row .v.plus{color:var(--emerald-600)}
+.bank-card-row .v.minus{color:var(--rose-600)}
+.bank-card-final{padding:12px 18px;background:var(--paper-25);border-top:1px solid var(--ink-100);display:flex;justify-content:space-between;align-items:center}
+.bank-card-final .l{font-size:10px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.06em}
+.bank-card-final .v{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink-950)}
+
+/* ═══ STRUK / PRINT ═══════════════════════════════════════ */
+#strukPrintArea{display:none}
+@media print{
+  body.printing-struk>*{display:none!important}
+  body.printing-struk #strukPrintArea{display:block!important;font-family:'SF Mono',monospace;font-size:12px;padding:6px;white-space:pre-wrap;line-height:1.7}
+}
+
+/* ═══ TIER PROMO LADDER (infografis, dipakai di halaman Member & Layar Customer) ═══ */
+.tier-promo{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px}
+.tp-card{border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-1);border:1px solid var(--ink-100);background:#fff;position:relative}
+.tp-head{padding:16px 10px 14px;text-align:center;position:relative;overflow:hidden}
+.tp-head::after{content:'';position:absolute;right:-20px;bottom:-24px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.16), transparent 70%)}
+.tp-icon{font-size:26px;position:relative;z-index:1;display:block;margin-bottom:6px}
+.tp-name{font-family:var(--serif);font-size:14px;font-weight:700;color:#fff;position:relative;z-index:1;letter-spacing:-.01em}
+.tp-head.gold .tp-name{color:#241a03}
+.tp-range{font-size:10px;color:rgba(255,255,255,.65);margin-top:3px;position:relative;z-index:1;font-family:var(--mono)}
+.tp-head.gold .tp-range{color:rgba(30,22,2,.6)}
+.tp-body{padding:12px 10px;text-align:center}
+.tp-reward-ic{font-size:22px;margin-bottom:6px}
+.tp-reward-txt{font-size:11px;font-weight:700;color:var(--ink-700);line-height:1.4}
+.tp-head.regular{background:linear-gradient(125deg,#3A4459,#232B3B)}
+.tp-head.silver{background:linear-gradient(125deg,#8B95A6,#525C6E)}
+.tp-head.gold{background:linear-gradient(125deg,#D8B95C,#9C7A1E)}
+.tp-head.platinum{background:linear-gradient(125deg,#2B2354,#100B26)}
+.tp-head.diamond{background:linear-gradient(125deg,#7DD8E8,#2E6FA8 55%,#153A63)}
+.tier-promo-title{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tier-promo-title h3{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--ink-950)}
+.tier-promo-title span{font-size:12px;color:var(--ink-400)}
+@media (max-width:900px){.tier-promo{grid-template-columns:repeat(2,1fr)}}
+
+/* Versi untuk Layar Customer (dark theme, ukuran lebih besar) */
+.cd-tier-promo{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;width:min(920px,88vw);margin-top:10px}
+.cd-tp-card{border-radius:18px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px)}
+.cd-tp-head{padding:16px 8px 12px;text-align:center;position:relative;overflow:hidden}
+.cd-tp-head.regular{background:linear-gradient(125deg,#3A4459,#232B3B)}
+.cd-tp-head.silver{background:linear-gradient(125deg,#8B95A6,#525C6E)}
+.cd-tp-head.gold{background:linear-gradient(125deg,#D8B95C,#9C7A1E)}
+.cd-tp-head.platinum{background:linear-gradient(125deg,#2B2354,#100B26)}
+.cd-tp-head.diamond{background:linear-gradient(125deg,#7DD8E8,#2E6FA8 55%,#153A63)}
+.cd-tp-icon{font-size:28px;display:block;margin-bottom:6px}
+.cd-tp-name{font-family:var(--serif);font-size:14px;font-weight:700;color:#fff}
+.cd-tp-head.gold .cd-tp-name{color:#241a03}
+.cd-tp-range{font-size:10px;color:rgba(255,255,255,.6);margin-top:2px;font-family:var(--mono)}
+.cd-tp-head.gold .cd-tp-range{color:rgba(30,22,2,.55)}
+.cd-tp-body{padding:10px 8px;text-align:center}
+.cd-tp-reward-ic{font-size:20px;margin-bottom:5px}
+.cd-tp-reward-txt{font-size:10.5px;font-weight:700;color:rgba(255,255,255,.85);line-height:1.4}
+@media (max-width:900px){.cd-tier-promo{grid-template-columns:repeat(2,1fr)}}
+
+/* ═══ CUSTOMER DISPLAY ═══════════════════════════════════════ */
+#customerDisplay{display:none;position:fixed;inset:0;z-index:5000;background:
+    radial-gradient(1100px 700px at 15% -10%, rgba(42,94,224,.28), transparent 60%),
+    radial-gradient(900px 600px at 105% 105%, rgba(189,149,48,.22), transparent 55%),
+    linear-gradient(160deg, var(--navy-950) 0%, var(--navy-900) 45%, var(--navy-850) 100%);
+  flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:var(--sans);overflow:hidden}
+.cd-brand{position:absolute;top:32px;left:40px;display:flex;align-items:center;gap:12px}
+.cd-brand-icon{width:42px;height:42px;background:var(--foil);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--navy-950)}
+.cd-brand-txt{color:#fff;font-size:15px;font-weight:700;display:flex;flex-direction:column}
+.cd-brand-txt span{font-size:11px;font-weight:500;color:rgba(255,255,255,.45);margin-top:1px}
+.cd-mode-badge{position:absolute;top:32px;right:40px;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.3);color:#6ee7b7;display:inline-flex;align-items:center;gap:6px}
+.cd-state{display:flex;flex-direction:column;align-items:center;text-align:center;max-width:640px;animation:cdFadeIn .5s ease}
+#cdIdle{max-width:960px}
+@keyframes cdFadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+.cd-idle-icon{font-size:64px;margin-bottom:18px;opacity:.85}
+.cd-idle-title{font-family:var(--serif);font-size:44px;font-weight:600;color:#fff;letter-spacing:-.02em;margin-bottom:14px}
+.cd-idle-sub{font-size:16px;color:rgba(255,255,255,.55);line-height:1.7;max-width:480px}
+.cd-idle-cta{margin-top:32px;font-size:13.5px;color:var(--gold-300);font-weight:600;background:rgba(216,185,92,.1);border:1px solid rgba(216,185,92,.25);padding:10px 20px;border-radius:30px}
+
+.cd-card{border-radius:24px;padding:28px 34px;width:440px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.4);position:relative;overflow:hidden;margin-bottom:26px;background:linear-gradient(125deg,#2B2354,#100B26)}
+.cd-card.regular{background:linear-gradient(125deg,#3A4459,#232B3B)}
+.cd-card.silver{background:linear-gradient(125deg,#8B95A6,#525C6E)}
+.cd-card.gold{background:linear-gradient(125deg,#D8B95C,#9C7A1E)}
+.cd-card.platinum{background:linear-gradient(125deg,#2B2354,#100B26)}
+.cd-card.diamond{background:linear-gradient(125deg,#7DD8E8,#2E6FA8 55%,#153A63)}
+.cd-card.gold .cd-card-name,.cd-card.gold .cd-card-id{color:#241a03}
+.cd-card::after{content:'';position:absolute;right:-40px;bottom:-50px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.14), transparent 70%)}
+.cd-card-top{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;margin-bottom:22px}
+.cd-card-chip{width:36px;height:26px;border-radius:6px;background:linear-gradient(135deg,#F3DFA0,#C9A445);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.cd-card-tier{font-size:11px;font-weight:800;padding:5px 13px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em;background:rgba(196,181,253,.22);color:#e4d9ff}
+.cd-card-name{font-family:var(--serif);font-size:26px;font-weight:600;color:#fff;position:relative;z-index:1;letter-spacing:-.01em}
+.cd-card-id{font-family:var(--mono);font-size:13px;color:rgba(255,255,255,.5);margin-top:6px;letter-spacing:.1em;position:relative;z-index:1}
+
+.cd-points-row{display:flex;gap:16px;width:440px;max-width:90vw}
+.cd-points-box{flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px 20px;backdrop-filter:blur(6px)}
+.cd-points-lbl{font-size:11px;color:rgba(255,255,255,.45);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.cd-points-num{font-family:var(--serif);font-size:38px;font-weight:600;color:var(--gold-300);letter-spacing:-.02em}
+.cd-progress-track{background:rgba(255,255,255,.1);border-radius:20px;height:8px;overflow:hidden;margin-top:6px}
+.cd-progress-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--violet-600),var(--violet-500));transition:width .6s ease}
+.cd-progress-txt{font-size:11px;color:rgba(255,255,255,.5);margin-top:6px;font-weight:600}
+
+.cd-trx-banner{margin-top:22px;background:rgba(21,154,107,.12);border:1px solid rgba(110,231,183,.3);border-radius:16px;padding:18px 24px;width:440px;max-width:90vw;animation:cdPulse 1.6s ease-in-out infinite}
+@keyframes cdPulse{0%,100%{opacity:1}50%{opacity:.75}}
+.cd-trx-lbl{font-size:10.5px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.cd-trx-jenis{font-size:18px;font-weight:700;color:#fff}
+.cd-trx-nominal{font-family:var(--mono);font-size:22px;font-weight:700;color:#fff;margin-top:4px}
+.cd-trx-poin{font-size:13px;color:#c4b5fd;font-weight:700;margin-top:8px}
+
+.cd-success-check{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,var(--emerald-600),var(--emerald-500));display:flex;align-items:center;justify-content:center;font-size:44px;color:#fff;margin-bottom:22px;box-shadow:0 12px 32px rgba(15,128,88,.4);animation:cdPop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes cdPop{from{transform:scale(0)}to{transform:scale(1)}}
+.cd-success-title{font-family:var(--serif);font-size:34px;font-weight:600;color:#fff;letter-spacing:-.01em;margin-bottom:14px}
+.cd-success-poin{font-family:var(--serif);font-size:52px;font-weight:700;color:var(--gold-300);letter-spacing:-.02em}
+.cd-success-total{font-size:15px;color:rgba(255,255,255,.6);margin-top:16px}
+.cd-success-total b{color:#fff;font-family:var(--mono)}
+
+/* ═══ RESPONSIVE ═══════════════════════════════════════════ */
+@media (max-width:980px){
+  .rail{width:76px}
+  .rail-brand-txt,.rail-name+*,.nb span:not(.nb-ic){display:none}
+  .nb{justify-content:center;padding:11px}
+  .rail-branch,.tb-uname,.tb-urole{display:none}
+  .stats-grid,.kas-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-left">
+      <div>
+        <div class="login-left-brand">
+          <div class="login-left-icon">BR</div>
+          <div class="login-left-name">BRILink Prime<small>Digital Agent Banking</small></div>
+        </div>
+        <div class="login-left-tagline">Setiap transaksi,<br><em>tercatat sempurna.</em></div>
+        <div class="login-left-sub">Platform kasir multi-cabang untuk agen BRILink — kelola transaksi, kartu member, dan laporan keuangan dalam satu terminal terpadu dan aman.</div>
+        <div class="login-left-stats">
+          <div class="login-stat"><div class="login-stat-num">10</div><div class="login-stat-lbl">Cabang terdaftar</div></div>
+          <div class="login-stat"><div class="login-stat-num">18</div><div class="login-stat-lbl">Jenis transaksi</div></div>
+          <div class="login-stat"><div class="login-stat-num">RFID</div><div class="login-stat-lbl">Sistem member</div></div>
+          <div class="login-stat"><div class="login-stat-num">256-bit</div><div class="login-stat-lbl">Password terenkripsi</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="login-right">
+      <div class="login-right-eyebrow">Akses Terminal</div>
+      <div class="login-right-title">Selamat datang</div>
+      <div class="login-right-sub">Masuk ke akun cabang Anda untuk melanjutkan</div>
+      <div class="login-err" id="loginErr"></div>
+      <div class="lg"><label>Username Cabang</label><input id="loginUser" placeholder="cabang1" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="lg"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="lg"><label>Nama Petugas</label><input id="loginNama" placeholder="Nama Anda" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="login-btn" onclick="doLogin()"><span>Masuk ke Sistem →</span></button>
+      <div class="login-hint"><b>Kasir:</b> cabang1–cabang10 (password: brilink123) &nbsp;·&nbsp; <b>Admin:</b> admin (password: admin123)<br>Password disimpan terenkripsi (hash). Segera ganti password default setelah login pertama.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════ -->
+<div id="appScreen">
+  <div class="app-shell">
+
+    <!-- RAIL / SIDEBAR NAVIGATION -->
+    <div class="rail">
+      <div class="rail-brand">
+        <div class="rail-icon">BR</div>
+        <div class="rail-brand-txt">
+          <div class="rail-name">BRILink Prime</div>
+          <div class="rail-branch" id="topCabang">—</div>
+        </div>
+      </div>
+      <div class="rail-nav">
+        <div class="rail-section-lbl">Operasional</div>
+        <button class="nb active" id="navKasir" onclick="showPage('kasir')">
+          <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l2 2 4-4m5-4v10a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h8l4 4z"/></svg></span>
+          <span>Kasir</span>
+        </button>
+        <button class="nb" id="navMember" onclick="showPage('member')">
+          <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2.2"/><path stroke-linecap="round" d="M2.5 9.5h19M6 15h4"/></svg></span>
+          <span>Database Member</span>
+        </button>
+        <button class="nb" id="navKas" onclick="showPage('kas')">
+          <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9.2"/><path stroke-linecap="round" d="M12 7.5v9M14.8 9.7c0-1.1-1.2-2-2.8-2s-2.8.8-2.8 1.9c0 3 5.6 1.5 5.6 4.3 0 1.1-1.25 1.9-2.8 1.9s-2.8-.9-2.8-2"/></svg></span>
+          <span>Kas &amp; Saldo</span>
+        </button>
+        <div class="rail-section-lbl">Transparansi</div>
+        <div style="display:flex;align-items:center;gap:4px;padding:0 12px 0 0">
+          <a class="nb" id="navCustomerDisplay" href="?tampilan=customer" target="_blank" rel="noopener" style="flex:1" onclick="setTimeout(()=>toast('🖥️ Layar Customer dibuka di tab baru — pindahkan ke monitor kedua','ok'),150)">
+            <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="4.5" width="19" height="13" rx="1.8"/><path stroke-linecap="round" d="M8 21h8M12 17.5V21"/></svg></span>
+            <span>Layar Customer</span>
+          </a>
+          <button onclick="openCustomerDisplayInfo()" title="Info & salin link" style="background:transparent;border:none;color:rgba(255,255,255,.35);cursor:pointer;padding:6px;font-size:13px;flex-shrink:0">ⓘ</button>
+        </div>
+        <div class="rail-section-lbl">Analitik</div>
+        <button class="nb" id="navLaporan" onclick="showPage('laporan')">
+          <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 20V10m6.5 10V4M17 20v-6"/></svg></span>
+          <span>Laporan</span>
+        </button>
+        <button class="nb" id="navAdmin" onclick="showPage('admin')" style="display:none">
+          <span class="nb-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+          <span>Panel Admin</span>
+        </button>
+      </div>
+      <div class="rail-foot">
+        <div class="tb-time" id="topTime">—</div>
+        <div class="tb-user" id="topUserBtn" onclick="toggleUserMenu()">
+          <div class="tb-av" id="topAvatar">?</div>
+          <div style="overflow:hidden"><div class="tb-uname" id="topUserName">—</div><div class="tb-urole" id="topUserSub">—</div></div>
+          <div class="tb-menu" id="userMenu">
+            <div class="tb-mi" onclick="closeUserMenu();backupData()">⬇ Backup Data Komputer Ini</div>
+            <div class="tb-mi" onclick="closeUserMenu();document.getElementById('restoreFileMenu').click()">⬆ Restore Data Komputer Ini</div>
+            <input type="file" id="restoreFileMenu" accept=".json" style="display:none" onchange="restoreData(this.files[0],'restoreFileMenu')">
+            <div class="tb-mi" onclick="openChangePass()">🔑 Ganti password</div>
+            <div class="tb-msep"></div>
+            <div class="tb-mi red" onclick="doLogout()">← Keluar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAIL RESIZER -->
+    <div class="rail-resizer" id="railResizer"></div>
+
+    <!-- MAIN AREA -->
+    <div class="app-main">
+
+      <!-- PAGE KASIR -->
+      <div class="page active" id="pageKasir">
+        <div class="kasir-layout">
+
+          <!-- LEDGER SIDEBAR FORM -->
+          <div class="sb">
+            <div class="sb-head">
+              <div class="sb-head-top">
+                <div class="sb-title">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,.7)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Input Transaksi Baru
+                  <span class="sb-title-badge">LIVE</span>
+                </div>
+              </div>
+              <div class="sb-meta">
+                <div class="sb-meta-box"><div class="sb-meta-lbl">No Trx</div><div class="sb-meta-val" id="mNoTrx">—</div></div>
+                <div class="sb-meta-box"><div class="sb-meta-lbl">Tanggal</div><div class="sb-meta-val" id="mTgl">—</div></div>
+                <div class="sb-meta-box"><div class="sb-meta-lbl">Jam</div><div class="sb-meta-val" id="mJam">—</div></div>
+              </div>
+            </div>
+
+            <div class="edit-banner" id="editBanner">
+              <span>✏️ Mode edit transaksi <strong id="editNoTrx"></strong></span>
+              <button onclick="batalEdit()">Batal edit</button>
+            </div>
+
+            <div class="sb-body">
+
+              <!-- RFID -->
+              <div class="sec-lbl">Kartu Member RFID <span class="opt" style="color:var(--ink-300);font-size:10px;font-weight:500">opsional</span></div>
+              <div class="rfid-zone" id="rfidZone" onclick="toggleRfidInput()">
+                <div class="rfid-default" id="rfidDefault">
+                  <div class="rfid-default-icon">📡</div>
+                  <div class="rfid-default-text">
+                    <div class="t1">Tap / ketik ID kartu member</div>
+                    <div class="t2">Klik di sini untuk mencari member</div>
+                  </div>
+                </div>
+                <div id="rfidFound" style="display:none">
+                  <div class="rfid-found">
+                    <div class="rfid-found-av" id="rfidAv">?</div>
+                    <div class="rfid-found-info">
+                      <div class="t1" id="rfidName">—</div>
+                      <div class="t2" id="rfidMeta">—</div>
+                      <div class="t3" id="rfidPts">—</div>
+                    </div>
+                  </div>
+                  <button class="rfid-clear" onclick="clearRfid(event)">✕</button>
+                </div>
+                <div class="rfid-search-row" id="rfidSearchRow" style="display:none" onclick="event.stopPropagation()">
+                  <input id="rfidQ" placeholder="ID kartu atau No. HP member" onkeydown="if(event.key==='Enter')searchRfid()">
+                  <button onclick="searchRfid()">Cari</button>
+                </div>
+              </div>
+
+              <!-- JENIS -->
+              <div class="sec-lbl">Jenis Transaksi</div>
+              <div class="jenis-scroll" id="jenisGrid"></div>
+              <input type="hidden" id="fJenis">
+
+              <div class="div"></div>
+
+              <!-- CUSTOMER -->
+              <div class="sec-lbl">Data Customer</div>
+              <div class="fi-row">
+                <div class="fg">
+                  <label>Nama <span class="opt">opsional</span></label>
+                  <input class="fi" id="fNama" placeholder="Nama nasabah">
+                </div>
+                <div class="fg">
+                  <label>No. HP <span class="opt">opsional</span></label>
+                  <input class="fi" id="fHP" placeholder="08xx-xxxx-xxxx" type="tel">
+                </div>
+              </div>
+
+              <div class="div"></div>
+
+              <!-- NOMINAL -->
+              <div class="sec-lbl">Rincian Transaksi</div>
+
+              <div class="fg">
+                <label>Nominal Transaksi</label>
+                <div class="money-wrap nominal-big">
+                  <div class="money-pre">Rp</div>
+                  <input class="fi money-inp" id="fNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
+                </div>
+              </div>
+
+              <div class="fi-row">
+                <div class="fg">
+                  <label>Biaya Admin</label>
+                  <div class="money-wrap">
+                    <div class="money-pre">Rp</div>
+                    <input class="fi money-inp" id="fAdmin" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
+                  </div>
+                </div>
+                <div class="fg">
+                  <label>Fee Agen</label>
+                  <div class="money-wrap">
+                    <div class="money-pre">Rp</div>
+                    <input class="fi money-inp" id="fFee" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
+                  </div>
+                </div>
+              </div>
+
+              <!-- TOTAL PREVIEW -->
+              <div class="total-preview" id="totalPreview">
+                <div class="total-preview-row main"><span class="tp-lbl">Nominal transaksi</span><span class="tp-val" id="pvNominal">Rp 0</span></div>
+                <div class="tp-div"></div>
+                <div class="total-preview-row">
+                  <span class="tp-lbl">Biaya admin <span style="opacity:.6">(potongan saldo)</span></span>
+                  <span class="tp-val" style="color:#fca5a5" id="pvAdmin">Rp 0</span>
+                </div>
+                <div class="total-preview-row">
+                  <span class="tp-lbl">Fee agen <span style="opacity:.6">(untung, masuk kas)</span></span>
+                  <span class="tp-val" style="color:#6ee7b7" id="pvFee">Rp 0</span>
+                </div>
+                <div class="tp-fee-row" id="pvPoinRow" style="display:none">
+                  <span style="font-size:10px;color:rgba(255,255,255,.4)">Poin untuk member</span>
+                  <span style="font-size:11px;font-weight:700;color:#c4b5fd" id="pvPoin">0 poin</span>
+                </div>
+              </div>
+
+              <!-- CHANNEL / REKENING BANK -->
+              <div class="fg">
+                <label>Rekening Bank yang Dipakai</label>
+                <div class="bank-picker">
+                  <button type="button" class="bkp-btn active" data-val="BRI" onclick="pilihChannel(this)">
+                    <span class="bkp-logo bri">BRI</span>
+                    <span class="bkp-name">BRI</span>
+                  </button>
+                  <button type="button" class="bkp-btn" data-val="TRF" onclick="pilihChannel(this)">
+                    <span class="bkp-logo transfer">TRF</span>
+                    <span class="bkp-name">Bank Transfer</span>
+                  </button>
+                </div>
+                <input type="hidden" id="fChannel" value="BRI">
+              </div>
+
+              <div class="div"></div>
+
+              <div class="fg">
+                <label>Keterangan <span class="opt">opsional</span></label>
+                <textarea class="fi" id="fKet" placeholder="Catatan tambahan..."></textarea>
+              </div>
+
+            </div>
+
+            <div class="sb-foot">
+              <input type="hidden" id="fEditIdx">
+              <button class="btn-save" id="btnSimpan" onclick="simpan()">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="btnSimpanLabel">Simpan Transaksi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- RESIZER -->
+          <div class="resizer" id="resizer"></div>
+
+          <!-- MAIN PANEL -->
+          <div class="main" id="mainPanel">
+            <div class="stats-grid" id="statsRow"></div>
+            <div class="filter-card">
+              <div class="filter-grid">
+                <div class="fg-f"><label>Tanggal</label><input type="date" id="fltTgl" onchange="filterChanged()"></div>
+                <div class="fg-f"><label>Jenis</label><select id="fltJenis" onchange="filterChanged()"><option value="">Semua jenis</option></select></div>
+                <div class="fg-f"><label>Petugas</label><input id="fltPetugas" placeholder="Nama petugas" oninput="filterChanged()"></div>
+                <div class="fg-f"><label>Customer</label><input id="fltCustomer" placeholder="Nama / member" oninput="filterChanged()"></div>
+                <div class="fg-f"><label>No Trx</label><input id="fltNo" placeholder="TRX-001" oninput="filterChanged()"></div>
+                <button class="btn-clr" onclick="clearFilter()">✕ Reset</button>
+                <button class="btn-export" onclick="exportExcel()">⬇ Export Excel</button>
+              </div>
+            </div>
+            <div class="tbl-card">
+              <div class="tbl-head">
+                <div class="tbl-title">Daftar Transaksi</div>
+                <div class="tbl-ct" id="tblCount">0 transaksi</div>
+              </div>
+              <div style="overflow-x:auto">
+                <table>
+                  <thead><tr>
+                    <th>No Trx</th><th>Jam</th><th>Jenis</th><th>Customer</th>
+                    <th class="r">Nominal</th><th class="r">Admin</th><th class="r">Fee</th>
+                    <th>Channel</th><th>Member</th><th>Petugas</th><th></th>
+                  </tr></thead>
+                  <tbody id="tbody"></tbody>
+                </table>
+              </div>
+              <div class="pager" id="trxPager"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE KAS -->
+      <div class="page" id="pageKas">
+        <div class="pg-body">
+          <div class="pg-top">
+            <div><div class="pg-heading">Kas &amp; Saldo</div><div class="pg-sub">Cek uang tunai dan saldo bank hari ini</div></div>
+            <div class="pg-actions">
+              <button class="btn-purple" onclick="openPindahSaldo()">🔁 Pindahkan Saldo</button>
+              <button class="btn-primary" id="btnAturSaldo" onclick="openSetSaldo()">💵 Atur Saldo</button>
+            </div>
+          </div>
+
+          <div class="kas-hero total-modal">
+            <div class="kas-hero-lbl">🏦 Total Saldo Keseluruhan (Modal)</div>
+            <div class="kas-hero-num" id="totalSaldoKeseluruhan">Rp 0</div>
+            <div class="kas-hero-sub" id="totalModalBreakdown">Kas Rp 0 · BRI Rp 0 · Bank Transfer Rp 0</div>
+          </div>
+
+          <div class="kas-hero">
+            <div class="kas-hero-lbl">💵 Uang Tunai Sekarang</div>
+            <div class="kas-hero-num" id="kasAkhir">Rp 0</div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.12)">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;color:rgba(255,255,255,.5)">✅ Fee agen hari ini</span>
+                <span style="font-size:14px;font-weight:700;color:#6ee7b7;font-family:var(--mono)" id="kasFeeToday">Rp 0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                <span style="font-size:11px;color:rgba(255,255,255,.5)">➖ Biaya pemindahan saldo hari ini</span>
+                <span style="font-size:14px;font-weight:700;color:#fca5a5;font-family:var(--mono)" id="kasBiayaPemindahan">Rp 0</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.12)">
+                <span style="font-size:11.5px;color:var(--gold-300);font-weight:700">💰 Untung Bersih Hari Ini</span>
+                <span style="font-size:17px;font-weight:800;color:#fff;font-family:var(--mono)" id="kasUntungBersih">Rp 0</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--ink-400);margin:-10px 0 24px;line-height:1.7">Uang tunai <b>bertambah</b> saat kamu terima uang cash dari customer, ditambah fee agen (untung) yang otomatis masuk kas setiap transaksi. Uang tunai <b>berkurang</b> saat kamu kasih uang cash ke customer (Tarik Tunai). Untung bersih = fee agen dikurangi biaya admin yang ditanggung sendiri saat memindahkan saldo.</div>
+
+          <div class="kas-section-title"><h3>Saldo Bank</h3><span>Terpotong nominal + biaya admin tiap pemindahan</span></div>
+          <div class="bank-grid" id="bankGrid"></div>
+          <div style="font-size:11.5px;color:var(--ink-400);margin:-6px 0 24px;line-height:1.7">Kalau kas kebanyakan tapi saldo habis, atau saldo BRI menumpuk tapi Bank Transfer kosong — pakai tombol <b>🔁 Pindahkan Saldo</b> di atas untuk menyeimbangkannya.</div>
+
+          <div class="tbl-card" style="margin-bottom:20px">
+            <div class="tbl-head">
+              <div class="tbl-title">Riwayat Pemindahan Hari Ini</div>
+            </div>
+            <div id="pindahHistList" style="max-height:280px;overflow-y:auto;padding:4px 20px"></div>
+          </div>
+
+          <div class="limit-card">
+            <div class="kas-lbl" style="margin-bottom:12px">Limit per Transaksi (diatur Admin)</div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:11px;color:var(--ink-400)">💸 Tarik Tunai maksimal</div>
+                <div style="font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink-950)" id="kasLimitTarikTxt">Rp 0</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--ink-400)">🔄 Transfer maksimal</div>
+                <div style="font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink-950)" id="kasLimitTransferTxt">Rp 0</div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--ink-400);margin-top:10px;line-height:1.6">Kalau nominal satu transaksi melebihi limit ini, sistem akan minta konfirmasi akun Admin sebelum transaksi bisa disimpan.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE LAPORAN -->
+      <div class="page" id="pageLaporan">
+        <div class="pg-body">
+          <div class="pg-top">
+            <div><div class="pg-heading">Laporan &amp; Rekap</div><div class="pg-sub">Ringkasan transaksi berdasarkan rentang tanggal</div></div>
+            <div class="pg-actions"><button class="btn-export" onclick="exportLaporanExcel()">⬇ Export Excel</button></div>
+          </div>
+          <div class="filter-card">
+            <div class="filter-grid">
+              <div class="fg-f"><label>Dari tanggal</label><input type="date" id="lapDari"></div>
+              <div class="fg-f"><label>Sampai tanggal</label><input type="date" id="lapSampai"></div>
+              <button class="btn-primary" onclick="renderLaporan()">🔍 Tampilkan</button>
+            </div>
+          </div>
+          <div class="stats-grid" id="lapStatsRow"></div>
+          <div class="tbl-card">
+            <div class="tbl-head">
+              <div class="tbl-title">Rekap per Jenis Transaksi</div>
+              <div class="tbl-ct" id="lapCount">0 jenis</div>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead><tr><th>Jenis</th><th class="r">Jumlah Trx</th><th class="r">Total Nominal</th><th class="r">Total Admin</th><th class="r">Total Fee Agen</th></tr></thead>
+                <tbody id="lapBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE ADMIN -->
+      <div class="page" id="pageAdmin">
+        <div class="pg-body">
+          <div class="pg-top">
+            <div><div class="pg-heading">Panel Admin</div><div class="pg-sub">Kelola akun cabang, pengaturan sistem, dan log aktivitas</div></div>
+            <div class="pg-actions">
+              <button class="btn-purple" onclick="backupData()">⬇ Backup Data</button>
+              <button class="btn-primary" onclick="document.getElementById('restoreFile').click()">⬆ Restore Data</button>
+              <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreData(this.files[0],'restoreFile')">
+            </div>
+          </div>
+
+          <div class="backup-status-card" id="backupStatusCard">
+            <div class="backup-status-icon" id="backupStatusIcon">💾</div>
+            <div style="flex:1">
+              <div class="backup-status-title" id="backupStatusTitle">Status Backup Data</div>
+              <div class="backup-status-sub" id="backupStatusSub">—</div>
+            </div>
+            <button class="btn-primary" onclick="backupData()" style="flex-shrink:0">⬇ Backup Sekarang</button>
+          </div>
+          <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">⚠️ Data aplikasi ini tersimpan <b>di browser komputer ini saja</b> — kalau komputer rusak, browser di-uninstall, atau cache dibersihkan, data bisa <b>hilang total</b> kalau belum pernah backup.<br><br>📌 <b>Penting kalau tiap cabang pakai komputer sendiri-sendiri:</b> backup & restore hanya berlaku untuk data <b>di komputer tempat kamu klik tombolnya</b>. Kalau komputer suatu cabang bermasalah, cabang itu bisa restore sendiri dari backup terakhirnya — klik menu profil (pojok kiri bawah) → "⬆ Restore Data Komputer Ini", tanpa perlu Admin.</div>
+
+          <div class="filter-card" style="margin-bottom:20px">
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">☁️ Backup Otomatis 3-Harian ke Google Drive — Cara Setup (sekali saja)</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.9">
+              Sistem ini <b>sudah otomatis membuat file backup dan mengunduhnya</b> tiap 3 hari sekali begitu ada yang login (tidak perlu klik apapun). Supaya file itu otomatis masuk ke Google Drive akun <b>acikari74@gmail.com</b>, arahkan folder unduhan browser ke folder Google Drive Desktop, satu kali saja per komputer:
+              <ol style="margin:10px 0 10px 18px;padding:0">
+                <li>Install <b>Google Drive untuk Desktop</b> di komputer ini, login pakai <b>acikari74@gmail.com</b> (kalau belum ada).</li>
+                <li>Biarkan Drive membuat folder sync, misalnya <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">G:\My Drive</span> atau <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">~/Google Drive</span>. Buat subfolder baru di dalamnya, misal <b>"Backup BRILink"</b>.</li>
+                <li>Di browser (Chrome/Edge): buka <b>Settings → Downloads</b> → ubah lokasi unduhan ke folder "Backup BRILink" tadi, dan aktifkan "Ask where to save each file" <b>dimatikan (off)</b> supaya tidak perlu konfirmasi tiap kali.</li>
+                <li>Selesai. Mulai sekarang, tiap file backup yang otomatis ter-download akan langsung ke-sync ke Google Drive dalam hitungan detik — bisa dicek langsung dari drive.google.com pakai akun acikari74@gmail.com.</li>
+              </ol>
+              <div style="background:var(--amber-lt);border:1px solid #f0dba0;border-radius:8px;padding:10px 12px;margin-top:8px;color:var(--amber-600);font-weight:600">Catatan jujur: aplikasi ini file HTML biasa, bukan aplikasi server — jadi tidak bisa "login ke Google" atau upload langsung dari dalam aplikasi (Google memang membatasi ini demi keamanan). Trik folder-sync di atas adalah cara paling praktis yang benar-benar berfungsi tanpa perlu setup server tambahan.</div>
+            </div>
+          </div>
+
+          <div class="filter-card" style="margin-bottom:20px">
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">📱 Layar Customer di Tablet/HP Terpisah (opsional)</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, "Layar Customer" cuma bisa dibuka di jendela kedua <b>komputer yang sama</b> dengan kasir. Kalau mau pakai <b>tablet/HP terpisah</b> sebagai layar sungguhan yang menghadap ke customer, aktifkan sinkronisasi jarak jauh di bawah ini (gratis, pakai Firebase, butuh internet).</div>
+
+            <details style="margin-bottom:14px">
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 Cara bikin akun Firebase gratis (sekali saja, ± 5 menit, semua klik-klik saja)</summary>
+              <ol style="margin:12px 0 4px 18px;padding:0;font-size:12px;color:var(--ink-600);line-height:2">
+                <li>Buka <b>console.firebase.google.com</b>, login pakai akun Google (boleh pakai acikari74@gmail.com).</li>
+                <li>Klik <b>"Add project"</b> / "Tambah project" → kasih nama bebas misal "BRILink" → lanjut terus sampai selesai (boleh matikan Google Analytics, tidak perlu).</li>
+                <li>Di menu kiri, klik <b>Build → Realtime Database</b> → klik <b>"Create Database"</b> → pilih lokasi server (bebas, mis. Singapore) → pilih mode <b>"Start in test mode"</b> → Enable.</li>
+                <li>Klik ikon ⚙️ (Project settings) di pojok kiri atas → scroll ke bawah ke bagian <b>"Your apps"</b> → klik ikon <b>{ }</b> (Web) → kasih nama app bebas → Register app.</li>
+                <li>Akan muncul kode berisi objek <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">firebaseConfig = {...}</span> — <b>copy semua isi kurung kurawal {...} itu</b> (termasuk kurung kurawalnya).</li>
+                <li>Tempel di kotak di bawah ini, lalu klik "Simpan Konfigurasi".</li>
+              </ol>
+            </details>
+
+            <div class="fg">
+              <label>Tempel Firebase Config di sini</label>
+              <textarea class="fi" id="fbConfigInput" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","...":"..."}' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+              <button class="btn-primary" onclick="saveFirebaseConfigUI()">💾 Simpan Konfigurasi</button>
+              <button class="btn-clr" onclick="removeFirebaseConfigUI()">🗑 Hapus Konfigurasi</button>
+            </div>
+
+            <div id="fbLinkSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--ink-100)">
+              <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:10px">✅ Sinkronisasi aktif untuk cabang: <span id="fbCabangLabel" style="font-family:var(--mono)">—</span></div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+                <img id="fbQrImg" src="" alt="QR Layar Customer" style="width:150px;height:150px;border-radius:12px;border:1px solid var(--ink-200)">
+                <div style="flex:1;min-width:220px">
+                  <div style="font-size:11px;color:var(--ink-400);margin-bottom:6px">Scan QR ini pakai kamera tablet/HP, atau salin link di bawah:</div>
+                  <div style="display:flex;gap:6px;margin-bottom:10px">
+                    <div id="fbRemoteUrl" style="flex:1;background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:9px 11px;font-size:10.5px;font-family:var(--mono);color:var(--ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+                    <button class="btn-clr" onclick="copyRemoteUrl()" style="flex-shrink:0">📋 Salin</button>
+                  </div>
+                  <div style="background:var(--rose-lt);border:1px solid #f3caca;border-radius:8px;padding:10px 12px;color:var(--rose-700);font-size:11.5px;font-weight:600;line-height:1.6">⚠️ Penting: link ini hanya akan terbuka di tablet/HP kalau file aplikasi ini sudah di-hosting online (bukan cuma tersimpan sebagai file di komputer kasir). Cara paling gampang tanpa perlu jadi programmer: buka <b>netlify.com/drop</b> di komputer ini, drag file HTML aplikasi ke situ, nanti dapat link publik dalam beberapa detik — pakai link publik itu (bukan file lokal) supaya QR/link di atas bisa dibuka dari tablet manapun.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-card">
+            <div class="filter-grid">
+              <div class="fg-f" style="min-width:220px"><label>Limit Tarik Tunai per Transaksi (Rp)</label><input class="fi" id="settingLimitTarik" placeholder="25.000.000" oninput="fmtMoney2(this)"></div>
+              <div class="fg-f" style="min-width:220px"><label>Limit Transfer per Transaksi (Rp)</label><input class="fi" id="settingLimitTransfer" placeholder="25.000.000" oninput="fmtMoney2(this)"></div>
+              <button class="btn-primary" onclick="saveLimitSetting()">💾 Simpan Pengaturan</button>
+            </div>
+            <div style="font-size:11px;color:var(--ink-400);margin-top:10px;line-height:1.6">Kalau nominal satu transaksi Tarik Tunai atau Transfer melebihi angka ini, kasir wajib minta konfirmasi akun Admin sebelum transaksi bisa disimpan. Kosongkan / isi 0 untuk tanpa batas.</div>
+          </div>
+
+          <div class="tbl-card" style="margin-bottom:20px">
+            <div class="tbl-head">
+              <div class="tbl-title">Akun Cabang</div>
+              <button class="btn-primary" style="padding:6px 12px;font-size:11px" onclick="openAddAccount()">+ Tambah Akun</button>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead><tr><th>Username</th><th>Nama Cabang</th><th>Role</th><th></th></tr></thead>
+                <tbody id="accBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tbl-card">
+            <div class="tbl-head">
+              <div class="tbl-title">Log Aktivitas (Audit Trail)</div>
+              <div class="tbl-ct" id="auditCount">0 log</div>
+            </div>
+            <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+              <table>
+                <thead><tr><th>Waktu</th><th>Aksi</th><th>Oleh</th><th>Cabang</th><th>Detail</th></tr></thead>
+                <tbody id="auditBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE MEMBER -->
+      <div class="page" id="pageMember">
+        <div class="pg-body">
+          <div class="pg-top">
+            <div><div class="pg-heading">Database Member RFID</div><div class="pg-sub">Kelola kartu member & riwayat transaksi pelanggan setia</div></div>
+            <div class="pg-actions">
+              <button class="btn-purple" onclick="openSimRfid()">📡 Simulasi Scan</button>
+              <button class="btn-primary" onclick="openAddMember()">+ Tambah Member</button>
+            </div>
+          </div>
+
+          <div class="tier-promo-title"><h3>🎁 Program Loyalitas Member</h3><span>Semakin banyak poin, semakin besar hadiahnya</span></div>
+          <div class="tier-promo" id="tierPromoContainer"></div>
+
+          <div class="msearch">
+            <div class="fg-f"><label>Cari nama / HP / ID kartu</label><input id="mSearch" placeholder="Ketik untuk mencari..." oninput="memberFilterChanged()"></div>
+            <div class="fg-f"><label>Tier</label><select id="mTier" onchange="memberFilterChanged()"><option value="">Semua tier</option><option>Regular</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></div>
+            <button class="btn-clr" onclick="clearMemberFilter()">✕ Reset</button>
+            <button class="btn-export" onclick="exportMemberExcel()">⬇ Export Excel</button>
+          </div>
+          <div class="mg" id="memberGrid"></div>
+          <div class="pager" id="memberPager"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ CUSTOMER DISPLAY (layar terpisah untuk nasabah) ══════════ -->
+<div id="customerDisplay">
+  <div class="cd-brand">
+    <div class="cd-brand-icon">BR</div>
+    <div class="cd-brand-txt">BRILink Prime<span id="cdCabang">—</span></div>
+  </div>
+  <div class="cd-mode-badge" id="cdModeBadge" style="display:none"></div>
+
+  <!-- IDLE STATE -->
+  <div class="cd-state" id="cdIdle">
+    <div class="cd-idle-icon">💳</div>
+    <div class="cd-idle-title">Selamat Datang</div>
+    <div class="cd-idle-sub">Tap kartu member Anda di kasir untuk melihat poin &amp; tier Anda di sini</div>
+    <div style="margin-top:30px;font-size:13px;font-weight:700;color:var(--gold-300);text-transform:uppercase;letter-spacing:.1em">🎁 Program Loyalitas Member</div>
+    <div class="cd-tier-promo" id="cdTierPromo"></div>
+    <div class="cd-idle-cta">Belum jadi member? Tanya kasir kami untuk daftar gratis ✨</div>
+  </div>
+
+  <!-- MEMBER / TRANSACTING STATE -->
+  <div class="cd-state" id="cdMember" style="display:none">
+    <div class="cd-card" id="cdCardHeader">
+      <div class="cd-card-top">
+        <div class="cd-card-chip"></div>
+        <div class="cd-card-tier" id="cdTierBadge">Regular</div>
+      </div>
+      <div class="cd-card-name" id="cdMemberName">—</div>
+      <div class="cd-card-id" id="cdMemberId">—</div>
+    </div>
+    <div class="cd-points-row">
+      <div class="cd-points-box">
+        <div class="cd-points-lbl">Poin Anda Sekarang</div>
+        <div class="cd-points-num" id="cdPoinNow">0</div>
+      </div>
+      <div class="cd-points-box">
+        <div class="cd-points-lbl">Progress Tier Berikutnya</div>
+        <div class="cd-progress-track"><div class="cd-progress-bar" id="cdProgressBar" style="width:0%"></div></div>
+        <div class="cd-progress-txt" id="cdProgressTxt">0%</div>
+      </div>
+    </div>
+    <div class="cd-trx-banner" id="cdTrxBanner" style="display:none">
+      <div class="cd-trx-lbl">Transaksi sedang diproses</div>
+      <div class="cd-trx-jenis" id="cdTrxJenis">—</div>
+      <div class="cd-trx-nominal" id="cdTrxNominal">Rp 0</div>
+      <div class="cd-trx-poin">+<span id="cdTrxPoin">1</span> poin akan ditambahkan</div>
+    </div>
+  </div>
+
+  <!-- SUCCESS STATE -->
+  <div class="cd-state" id="cdSuccess" style="display:none">
+    <div class="cd-success-check">✓</div>
+    <div class="cd-success-title">Terima kasih, <span id="cdSuccessName">Kak</span>!</div>
+    <div class="cd-success-poin">+<span id="cdSuccessPoinBaru">1</span> Poin</div>
+    <div class="cd-success-total">Total poin Anda sekarang: <b id="cdSuccessTotal">0</b></div>
+  </div>
+</div>
+
+<!-- MODAL MEMBER -->
+<div class="mo" id="modalMember">
+  <div class="md">
+    <div class="md-title"><span>💳</span><span id="modalMemberTitle">Tambah Member Baru</span></div>
+    <input type="hidden" id="editMemberId">
+    <div class="mgrid">
+      <div class="fg"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
+      <div class="fg"><label>No. HP *</label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
+      <div class="fg"><label>ID Kartu RFID *</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
+      <div class="fg"><label>Tanggal lahir <span class="opt">opsional</span></label><input class="fi" id="mTglLahir" type="date"></div>
+      <div class="fg" style="grid-column:span 2"><label>Alamat <span class="opt">opsional</span></label><input class="fi" id="mAlamat" placeholder="Alamat singkat"></div>
+      <div class="fg"><label>Poin awal</label><input class="fi" id="mPoin" type="number" min="0" value="0"></div>
+    </div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalMember')">Batal</button><button class="btn-ok" onclick="saveMember()">Simpan Member</button></div>
+  </div>
+</div>
+
+<!-- MODAL HISTORY -->
+<div class="mo" id="modalHistory">
+  <div class="md" style="max-width:560px">
+    <div class="md-title">📋 Riwayat Transaksi</div>
+    <div class="hist-banner">
+      <div style="font-family:var(--serif);font-size:19px;font-weight:600;color:#fff;letter-spacing:-.01em" id="histName">—</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px;font-family:var(--mono)" id="histId">—</div>
+      <div style="display:flex;gap:24px;margin-top:14px">
+        <div><div style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em">Transaksi</div><div style="font-family:var(--serif);font-size:21px;font-weight:600;color:#fff" id="histTotTrx">0</div></div>
+        <div><div style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em">Total nominal</div><div style="font-family:var(--serif);font-size:21px;font-weight:600;color:#fff" id="histTotNom">Rp0</div></div>
+        <div><div style="font-size:9px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.07em">Total poin</div><div style="font-family:var(--serif);font-size:21px;font-weight:600;color:#c4b5fd" id="histTotPoin">0</div></div>
+      </div>
+    </div>
+    <div id="histList" style="max-height:320px;overflow-y:auto"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalHistory')">Tutup</button></div>
+  </div>
+</div>
+
+<!-- MODAL SIM RFID -->
+<div class="mo" id="modalSimRfid">
+  <div class="md" style="max-width:400px">
+    <div class="md-title">📡 Simulasi Scan RFID</div>
+    <p style="font-size:13px;color:var(--ink-500);margin-bottom:16px;line-height:1.6">Pilih member untuk simulasi tap kartu. Di implementasi nyata, reader RFID USB mengirim ID secara otomatis.</p>
+    <div id="simRfidList" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalSimRfid')">Tutup</button></div>
+  </div>
+</div>
+
+<!-- MODAL GANTI PASS -->
+<div class="mo" id="modalPass">
+  <div class="md" style="max-width:360px">
+    <div class="md-title">🔑 Ganti Password</div>
+    <div class="fg"><label>Password lama</label><input class="fi" id="passOld" type="password" placeholder="••••••••"></div>
+    <div class="fg"><label>Password baru</label><input class="fi" id="passNew" type="password" placeholder="••••••••"></div>
+    <div class="fg"><label>Konfirmasi password baru</label><input class="fi" id="passConfirm" type="password" placeholder="••••••••"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPass')">Batal</button><button class="btn-ok" onclick="doChangePass()">Simpan</button></div>
+  </div>
+</div>
+
+<!-- MODAL SET SALDO -->
+<div class="mo" id="modalSaldo">
+  <div class="md" style="max-width:400px">
+    <div class="md-title">💵 Atur Saldo</div>
+    <p style="font-size:12px;color:var(--ink-500);margin:-10px 0 16px;line-height:1.6">Angka di bawah ini adalah saldo yang <b>sedang berjalan sekarang</b>. Ubah langsung ke angka yang benar kalau ada selisih.</p>
+    <div class="fg"><label>Kas Tunai Sekarang</label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="saldoInputKas" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="div"></div>
+    <div class="fg"><label>Saldo BRI Sekarang</label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="saldoInputBRI" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="fg"><label>Saldo Bank Transfer Sekarang</label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="saldoInputTRF" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalSaldo')">Batal</button><button class="btn-ok" onclick="simpanSaldo()">Simpan</button></div>
+  </div>
+</div>
+
+<!-- MODAL PEMINDAHAN SALDO -->
+<div class="mo" id="modalPindah">
+  <div class="md" style="max-width:400px">
+    <div class="md-title">🔁 Pemindahan Saldo</div>
+    <p style="font-size:12.5px;color:var(--ink-500);margin-bottom:16px;line-height:1.6">Pindahkan dana antara kas tunai dan saldo bank — misalnya menyetor kas berlebih ke bank, atau memindahkan saldo BRI yang menumpuk ke Bank Transfer.</p>
+    <div class="fi-row">
+      <div class="fg"><label>Dari</label>
+        <select class="fi" id="pindahDari">
+          <option value="KAS">💵 Kas Tunai</option>
+          <option value="BRI">🔵 Saldo BRI</option>
+          <option value="TRF">🟢 Saldo Bank Transfer</option>
+        </select>
+      </div>
+      <div class="fg"><label>Ke</label>
+        <select class="fi" id="pindahKe">
+          <option value="KAS">💵 Kas Tunai</option>
+          <option value="BRI" selected>🔵 Saldo BRI</option>
+          <option value="TRF">🟢 Saldo Bank Transfer</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Nominal</label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="pindahNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="fg"><label>Biaya Admin <span class="opt">opsional, potong dari sisi "Dari"</span></label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="pindahAdmin" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="fg"><label>Catatan <span class="opt">opsional</span></label><input class="fi" id="pindahKet" placeholder="mis: Setor kas berlebih ke BRI"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPindah')">Batal</button><button class="btn-ok" onclick="prosesPindah()">Pindahkan</button></div>
+  </div>
+</div>
+
+<!-- MODAL LIMIT OVERRIDE (konfirmasi admin untuk transaksi di atas limit) -->
+<div class="mo" id="modalLimitOverride">
+  <div class="md" style="max-width:380px">
+    <div class="md-title">🔒 Melebihi Limit Transaksi</div>
+    <p id="limitOverrideMsg" style="font-size:13px;color:var(--ink-600);margin-bottom:18px;line-height:1.7"></p>
+    <div class="fg"><label>Username Admin</label><input class="fi" id="overrideAdminUser" placeholder="admin"></div>
+    <div class="fg"><label>Password Admin</label><input class="fi" id="overrideAdminPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')confirmLimitOverride()"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalLimitOverride')">Batal</button><button class="btn-ok" onclick="confirmLimitOverride()">Konfirmasi &amp; Lanjutkan</button></div>
+  </div>
+</div>
+
+<!-- MODAL INFO LAYAR CUSTOMER (salin link / info tambahan) -->
+<div class="mo" id="modalCustomerFallback">
+  <div class="md" style="max-width:440px">
+    <div class="md-title">🖥️ Layar Customer</div>
+    <p style="font-size:13px;color:var(--ink-600);margin-bottom:16px;line-height:1.7">Klik menu <b>"Layar Customer"</b> di sidebar untuk membuka tampilan ini di tab baru, lalu pindahkan tab/jendelanya ke monitor kedua yang menghadap customer.</p>
+    <div style="font-size:11px;color:var(--ink-400);margin-bottom:6px">Link langsung (bisa disalin & dibuka manual di tab lain):</div>
+    <div style="display:flex;gap:6px">
+      <div id="cdFallbackUrl" style="flex:1;background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:9px 11px;font-size:11px;font-family:var(--mono);color:var(--ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button class="btn-clr" onclick="copyCustomerDisplayLink()" style="padding:9px 14px">📋 Salin</button>
+    </div>
+    <div style="font-size:11px;color:var(--ink-400);margin-top:14px;line-height:1.6">Catatan: link di atas harus dibuka di <b>browser yang sama</b> dengan layar kasir (boleh tab/jendela berbeda) supaya datanya tersinkron otomatis.</div>
+
+    <div id="cdRemoteSection" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--ink-100)">
+      <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:10px">📱 Mau pakai tablet/HP terpisah?</div>
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <img id="cdRemoteQr" src="" alt="QR" style="width:110px;height:110px;border-radius:10px;border:1px solid var(--ink-200)">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--ink-400);margin-bottom:8px">Scan QR ini dari tablet/HP untuk membuka Layar Customer cabang ini secara jarak jauh.</div>
+          <button class="btn-clr" onclick="copyRemoteUrlModal()" style="width:100%">📋 Salin Link Jarak Jauh</button>
+        </div>
+      </div>
+    </div>
+    <div id="cdRemoteNotSetup" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--ink-100);font-size:11px;color:var(--ink-400);line-height:1.6">📱 Mau pakai tablet/HP terpisah sebagai layar customer? Fitur ini belum diaktifkan — minta Admin setup sinkronisasi jarak jauh di Panel Admin.</div>
+
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalCustomerFallback')">Tutup</button></div>
+  </div>
+</div>
+
+<!-- MODAL REDEEM POIN -->
+<div class="mo" id="modalRedeem">
+  <div class="md" style="max-width:380px">
+    <div class="md-title">🎁 Tukar Poin Member</div>
+    <input type="hidden" id="redeemMemberId">
+    <div class="fg"><label style="font-weight:700;color:var(--ink-700)" id="redeemMemberInfo">—</label></div>
+    <div class="fg"><label>Jumlah poin ditukar</label><input class="fi" id="redeemJumlah" type="number" min="1" placeholder="0"></div>
+    <div class="fg"><label>Ditukar dengan (hadiah / potongan) *</label><input class="fi" id="redeemKet" placeholder="mis: Voucher pulsa 10rb"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalRedeem')">Batal</button><button class="btn-ok" onclick="prosesRedeem()">Tukar Poin</button></div>
+  </div>
+</div>
+
+<!-- MODAL STRUK -->
+<div class="mo" id="modalStruk">
+  <div class="md" style="max-width:360px">
+    <div class="md-title">🧾 Struk Transaksi</div>
+    <div id="strukPreview" style="font-family:'SF Mono',monospace;font-size:12px;line-height:1.7;background:var(--paper-50);border:1px dashed var(--ink-300);border-radius:8px;padding:16px;white-space:pre-wrap"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalStruk')">Tutup</button><button class="btn-ok" onclick="cetakStruk()">🖨 Cetak Struk</button></div>
+  </div>
+</div>
+<div id="strukPrintArea"></div>
+
+<!-- MODAL AKUN (ADMIN) -->
+<div class="mo" id="modalAccount">
+  <div class="md" style="max-width:420px">
+    <div class="md-title">👤 Akun Cabang</div>
+    <input type="hidden" id="editAccUser">
+    <div class="fg"><label>Username *</label><input class="fi" id="accUser" placeholder="cabang11"></div>
+    <div class="fg"><label>Nama Cabang *</label><input class="fi" id="accLabel" placeholder="Cabang 11"></div>
+    <div class="fg"><label>Role</label>
+      <select class="fi" id="accRole"><option value="kasir">Kasir</option><option value="admin">Admin</option></select>
+    </div>
+    <div class="fg"><label>Password <span class="opt">kosongkan bila tidak diubah</span></label><input class="fi" id="accPass" type="password" placeholder="••••••••"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalAccount')">Batal</button><button class="btn-ok" onclick="saveAccount()">Simpan</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+// ══ RESIZER ════════════════════════════════════
+function makeResizable(resizerId, panelSelector, minW, maxW){
+  window.addEventListener('load', function() {
+    const resizer = document.getElementById(resizerId);
+    const panel = document.querySelector(panelSelector);
+    if (!resizer || !panel) return;
+    let dragging = false, startX = 0, startW = 0;
+
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      dragging = true;
+      startX = e.clientX;
+      startW = panel.getBoundingClientRect().width;
+      resizer.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      const delta = e.clientX - startX;
+      const max = typeof maxW === 'function' ? maxW() : maxW;
+      const newW = Math.max(minW, Math.min(max, startW + delta));
+      panel.style.width = newW + 'px';
+      panel.style.minWidth = newW + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (!dragging) return;
+      dragging = false;
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  });
+}
+makeResizable('resizer', '.sb', 320, () => window.innerWidth * 0.78);
+makeResizable('railResizer', '.rail', 72, 340);
+</script>
+<script>
+// ══ CUSTOMER DISPLAY (layar transparansi member) ══════════════
+// Layar kedua yang bisa dibuka di jendela/monitor terpisah, menampilkan poin & tier
+// member secara real-time ke customer saat kasir memproses transaksi mereka.
+const CD_CHANNEL_NAME='bl_customer_display';
+const CD_STORAGE_KEY='bl_customer_display_state';
+let cdChannel=null;
+try{cdChannel=new BroadcastChannel(CD_CHANNEL_NAME)}catch(e){cdChannel=null}
+
+function isCustomerDisplayMode(){
+  return new URLSearchParams(window.location.search).get('tampilan')==='customer';
+}
+function customerDisplayUrl(){
+  return window.location.href.split('?')[0].split('#')[0]+'?tampilan=customer';
+}
+function openCustomerDisplayInfo(){
+  document.getElementById('cdFallbackUrl').textContent=customerDisplayUrl();
+  const remoteUrl=remoteCustomerDisplayUrl();
+  if(remoteUrl){
+    document.getElementById('cdRemoteSection').style.display='block';
+    document.getElementById('cdRemoteNotSetup').style.display='none';
+    document.getElementById('cdRemoteQr').src='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(remoteUrl);
+  } else {
+    document.getElementById('cdRemoteSection').style.display='none';
+    document.getElementById('cdRemoteNotSetup').style.display='block';
+  }
+  openModal('modalCustomerFallback');
+}
+function copyCustomerDisplayLink(){
+  const url=document.getElementById('cdFallbackUrl').textContent;
+  navigator.clipboard.writeText(url).then(()=>toast('✓ Link disalin ke clipboard','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
+}
+function copyRemoteUrlModal(){
+  const url=remoteCustomerDisplayUrl();
+  if(!url)return;
+  navigator.clipboard.writeText(url).then(()=>toast('✓ Link jarak jauh disalin','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
+}
+// Catatan penting: Layar Customer dibuka lewat link <a href="?tampilan=customer" target="_blank">
+// biasa (navigasi native browser) — BUKAN lewat window.open()+kontrol antar-jendela.
+// Kenapa: untuk file lokal (file://), browser sering membatasi akses script antar-jendela
+// meski jendelanya berhasil terbuka (dianggap origin berbeda demi keamanan), sehingga
+// perintah "pindah ke mode Customer" gagal diam-diam dan jendela baru nyangkut di halaman
+// login. Navigasi link native tidak punya masalah ini karena bukan scripting cross-window,
+// jadi ini cara yang paling andal di semua browser & semua cara file dibuka.
+function broadcastCustomerState(state){
+  const payload={...state,ts:Date.now()};
+  try{localStorage.setItem(CD_STORAGE_KEY,JSON.stringify(payload))}catch(e){}
+  if(cdChannel){try{cdChannel.postMessage(payload)}catch(e){}}
+  fbPushCustomerState(payload);
+}
+function cdIdleState(){
+  broadcastCustomerState({type:'idle',cabang:session?session.label:''});
+}
+function cdMemberState(m,trx){
+  broadcastCustomerState({
+    type:trx?'transacting':'member',
+    member:{nama:m.nama,rfid:m.rfid,poin:m.poin||0,tier:getTier(m.poin||0)},
+    trx:trx||null
+  });
+}
+function cdSuccessState(memberNama,poinBaru,totalPoin){
+  broadcastCustomerState({type:'success',memberNama,poinBaru,totalPoin});
+}
+
+// ══ SINKRONISASI JARAK JAUH (Firebase) — untuk Layar Customer di device TERPISAH ══
+// BroadcastChannel/localStorage di atas cuma jalan kalau kedua layar dibuka di BROWSER
+// YANG SAMA di KOMPUTER YANG SAMA (localStorage tidak pernah bisa nyeberang device).
+// Supaya bisa dipakai di tablet/HP terpisah sebagai layar customer sungguhan, kita pakai
+// Firebase Realtime Database (gratis) sebagai "jembatan" lewat internet. Ini sepenuhnya
+// OPSIONAL — kalau belum di-setup, aplikasi tetap jalan normal pakai mode 1-komputer di atas.
+function fbConfigKey(){return'bl_firebase_config'}
+function getFirebaseConfig(){try{const r=localStorage.getItem(fbConfigKey());return r?JSON.parse(r):null}catch(e){return null}}
+function setFirebaseConfig(cfg){localStorage.setItem(fbConfigKey(),JSON.stringify(cfg))}
+function clearFirebaseConfig(){localStorage.removeItem(fbConfigKey())}
+let fbApp=null,fbDb=null;
+function initFirebaseIfPossible(cfg){
+  if(typeof firebase==='undefined')return null; // SDK belum/gagal dimuat (mis. sedang offline) — aman, fitur lain tetap jalan
+  cfg=cfg||getFirebaseConfig();
+  if(!cfg||!cfg.databaseURL)return null;
+  try{
+    if(!fbApp)fbApp=firebase.initializeApp(cfg);
+    if(!fbDb)fbDb=firebase.database();
+    return fbDb;
+  }catch(e){console.warn('Firebase init gagal:',e);return null}
+}
+function cabangSyncId(){
+  // Identitas path di Firebase untuk cabang ini — pakai username akun supaya tiap cabang punya "ruang" sendiri
+  return session?session.user:(new URLSearchParams(window.location.search).get('cabang')||'default');
+}
+function fbPushCustomerState(payload){
+  const db=initFirebaseIfPossible();
+  if(!db)return;
+  try{db.ref('brilink_customer/'+cabangSyncId()).set(payload)}catch(e){console.warn('Gagal kirim ke Firebase:',e)}
+}
+function encodeFirebaseConfigForUrl(cfg){
+  try{return btoa(encodeURIComponent(JSON.stringify(cfg)))}catch(e){return ''}
+}
+function decodeFirebaseConfigFromUrl(str){
+  try{return JSON.parse(decodeURIComponent(atob(str)))}catch(e){return null}
+}
+function remoteCustomerDisplayUrl(){
+  const cfg=getFirebaseConfig();
+  if(!cfg)return '';
+  const base=window.location.href.split('?')[0].split('#')[0];
+  const cabang=session?session.user:'';
+  return base+'?tampilan=customer&cabang='+encodeURIComponent(cabang)+'&fb='+encodeFirebaseConfigForUrl(cfg);
+}
+
+// ══ RENDER (dijalankan di jendela Layar Customer) ══════════════
+const CD_TIER_NEXT={Regular:20,Silver:60,Gold:150,Platinum:300,Diamond:300};
+function cdShow(id){
+  ['cdIdle','cdMember','cdSuccess'].forEach(x=>document.getElementById(x).style.display=(x===id?'flex':'none'));
+}
+let cdSuccessTimer=null;
+function renderCustomerDisplay(state){
+  if(!state)return;
+  document.getElementById('cdCabang').textContent=state.cabang||document.getElementById('cdCabang').textContent||'';
+  if(state.type==='idle'){
+    clearTimeout(cdSuccessTimer);
+    cdShow('cdIdle');
+  } else if(state.type==='member'||state.type==='transacting'){
+    clearTimeout(cdSuccessTimer);
+    const m=state.member;if(!m)return;
+    const tier=m.tier||'Regular';
+    document.getElementById('cdCardHeader').className='cd-card '+tier.toLowerCase();
+    document.getElementById('cdMemberName').textContent=m.nama;
+    document.getElementById('cdMemberId').textContent=m.rfid;
+    document.getElementById('cdTierBadge').textContent=(TIER_INFO[tier]?TIER_INFO[tier].icon+' ':'')+tier;
+    document.getElementById('cdPoinNow').textContent=(m.poin||0).toLocaleString('id-ID');
+    const pct=tier==='Diamond'?100:Math.min(100,Math.round((m.poin||0)/CD_TIER_NEXT[tier]*100));
+    document.getElementById('cdProgressBar').style.width=pct+'%';
+    document.getElementById('cdProgressTxt').textContent=(tier==='Diamond'?'Tier tertinggi tercapai! 💎':pct+'% menuju tier berikutnya');
+    const banner=document.getElementById('cdTrxBanner');
+    if(state.type==='transacting'&&state.trx){
+      banner.style.display='block';
+      document.getElementById('cdTrxJenis').textContent=state.trx.jenis||'—';
+      document.getElementById('cdTrxNominal').textContent=fmtRp(state.trx.nominal||0);
+      document.getElementById('cdTrxPoin').textContent=state.trx.poin||1;
+    } else {
+      banner.style.display='none';
+    }
+    cdShow('cdMember');
+  } else if(state.type==='success'){
+    document.getElementById('cdSuccessName').textContent=state.memberNama||'Kak';
+    document.getElementById('cdSuccessPoinBaru').textContent=state.poinBaru||1;
+    document.getElementById('cdSuccessTotal').textContent=(state.totalPoin||0).toLocaleString('id-ID');
+    cdShow('cdSuccess');
+    clearTimeout(cdSuccessTimer);
+    cdSuccessTimer=setTimeout(()=>cdShow('cdIdle'),7000);
+  }
+}
+function initCustomerDisplayWindow(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('customerDisplay').style.display='flex';
+  document.getElementById('cdTierPromo').innerHTML=buildCdTierPromoHtml();
+
+  const params=new URLSearchParams(window.location.search);
+  const fbParam=params.get('fb');
+  const cabangParam=params.get('cabang');
+
+  if(fbParam&&cabangParam){
+    // ═ MODE JARAK JAUH — device terpisah (tablet/HP), sinkron lewat Firebase lewat internet ═
+    document.getElementById('cdModeBadge').style.display='inline-flex';
+    document.getElementById('cdModeBadge').textContent='🌐 Tersambung Jarak Jauh';
+    const cfg=decodeFirebaseConfigFromUrl(fbParam);
+    if(!cfg){
+      renderCustomerDisplay({type:'idle',cabang:''});
+      return;
+    }
+    const db=initFirebaseIfPossible(cfg);
+    renderCustomerDisplay({type:'idle',cabang:''});
+    if(db){
+      db.ref('brilink_customer/'+cabangParam).on('value',snap=>{
+        const val=snap.val();
+        if(val)renderCustomerDisplay(val);
+      },err=>{
+        console.warn('Firebase listen error:',err);
+        document.getElementById('cdModeBadge').textContent='⚠️ Gagal tersambung — cek internet';
+      });
+    } else {
+      document.getElementById('cdModeBadge').textContent='⚠️ Gagal memuat Firebase — cek internet';
+    }
+    return;
+  }
+
+  // ═ MODE LOKAL — jendela kedua di komputer yang sama, sinkron lewat localStorage/BroadcastChannel ═
+  try{
+    const saved=localStorage.getItem(CD_STORAGE_KEY);
+    renderCustomerDisplay(saved?JSON.parse(saved):{type:'idle',cabang:''});
+  }catch(e){renderCustomerDisplay({type:'idle',cabang:''})}
+  if(cdChannel)cdChannel.onmessage=(e)=>renderCustomerDisplay(e.data);
+  window.addEventListener('storage',(e)=>{
+    if(e.key===CD_STORAGE_KEY&&e.newValue){try{renderCustomerDisplay(JSON.parse(e.newValue))}catch(err){}}
+  });
+}
+// Catatan: pemanggilan initCustomerDisplayWindow() dilakukan di akhir script utama
+// (setelah fmtRp/getTier didefinisikan), lihat baris paling bawah file ini.
+</script>
+<script>
+// ══ CRYPTO HELPERS (password hashing) ══════════
+async function sha256Hex(str){
+  const enc=new TextEncoder().encode(str);
+  const buf=await crypto.subtle.digest('SHA-256',enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function genSalt(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+async function hashPass(pass,salt){return sha256Hex(salt+':'+pass)}
+
+// ══ ACCOUNTS ══════════════════════════════════
+// Passwords are stored as salted SHA-256 hashes, never plaintext.
+// Legacy plaintext accounts (from older versions of this app) are
+// migrated automatically the first time they are loaded.
+async function getAccounts(){
+  let acc=JSON.parse(localStorage.getItem('bl_accounts')||'null');
+  let changed=false;
+  if(!acc){
+    acc={};
+    for(let i=1;i<=10;i++){
+      const salt=genSalt();
+      acc['cabang'+i]={salt,hash:await hashPass('brilink123',salt),label:'Cabang '+i,role:'kasir'};
+    }
+    changed=true;
+  }
+  for(const k in acc){
+    if(acc[k].pass!==undefined && !acc[k].hash){ // migrate legacy plaintext
+      const salt=genSalt();
+      acc[k].salt=salt;acc[k].hash=await hashPass(acc[k].pass,salt);
+      delete acc[k].pass;
+      changed=true;
+    }
+    if(!acc[k].role){acc[k].role='kasir';changed=true}
+  }
+  if(!acc['admin']){
+    const salt=genSalt();
+    acc['admin']={salt,hash:await hashPass('admin123',salt),label:'Administrator Pusat',role:'admin'};
+    changed=true;
+  }
+  if(changed)localStorage.setItem('bl_accounts',JSON.stringify(acc));
+  return acc;
+}
+function saveAccounts(a){localStorage.setItem('bl_accounts',JSON.stringify(a))}
+
+// ══ SESSION ════════════════════════════════════
+let session=null;
+async function doLogin(){
+  const user=document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass=document.getElementById('loginPass').value;
+  const nama=document.getElementById('loginNama').value.trim();
+  const err=document.getElementById('loginErr');
+  const btn=document.querySelector('.login-btn');
+  if(!nama){err.textContent='Masukkan nama petugas.';err.style.display='block';return}
+  if(!user||!pass){err.textContent='Masukkan username dan password.';err.style.display='block';return}
+  if(btn){btn.disabled=true;btn.style.opacity='.7';btn.innerHTML='<span>Memeriksa...</span>'}
+  const acc=await getAccounts();
+  const a=acc[user];
+  let ok=false;
+  if(a){const h=await hashPass(pass,a.salt);ok=(h===a.hash)}
+  if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='<span>Masuk ke Sistem →</span>'}
+  if(!ok){
+    err.textContent='Username atau password salah.';err.style.display='block';
+    const logs=JSON.parse(localStorage.getItem('bl_audit')||'[]');
+    logs.push({waktu:new Date().toLocaleString('id-ID'),ts:Date.now(),aksi:'LOGIN_GAGAL',oleh:nama||'-',cabang:user||'-',detail:'Percobaan login gagal'});
+    localStorage.setItem('bl_audit',JSON.stringify(logs));
+    return;
+  }
+  err.style.display='none';
+  session={user,label:a.label,nama,role:a.role||'kasir'};
+  logAudit('LOGIN','Login berhasil');
+  startApp();
+}
+function doLogout(){
+  if(!confirm('Yakin ingin keluar?'))return;
+  logAudit('LOGOUT','Keluar dari sistem');
+  broadcastCustomerState({type:'idle',cabang:''});
+  session=null;currentRfid=null;
+  document.getElementById('appScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  ['loginUser','loginPass','loginNama'].forEach(id=>document.getElementById(id).value='');
+  closeUserMenu();
+}
+function startApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appScreen').style.display='block';
+  document.getElementById('topCabang').textContent=session.label;
+  document.getElementById('topUserName').textContent=session.nama;
+  document.getElementById('topUserSub').textContent=session.label+(session.role==='admin'?' · Admin':'');
+  document.getElementById('topAvatar').textContent=session.nama.charAt(0).toUpperCase();
+  document.getElementById('navAdmin').style.display=session.role==='admin'?'flex':'none';
+  loadData();buildJenisGrid();updateNoTrx();render();renderMembers();renderKas();tick();
+  document.getElementById('tierPromoContainer').innerHTML=buildTierPromoHtml();
+  cdIdleState();
+  checkAutoBackup();
+}
+
+// ══ AUTO-BACKUP (tiap 3 hari, otomatis ke-download saat ada yang login) ══════
+// Catatan jujur: ini TIDAK bisa upload langsung ke Google Drive dari file HTML biasa
+// (Google memblokir login/OAuth dari file:// demi keamanan, dan tidak ada "server" di balik
+// aplikasi ini yang bisa jalan sendiri kalau aplikasinya tidak dibuka). Solusi yang benar-benar
+// jalan: arahkan folder unduhan browser ke folder Google Drive Desktop yang sudah ter-sync
+// (punya acikari74@gmail.com) — begitu file backup ke-download di sini, Drive Desktop akan
+// otomatis mengunggahnya ke cloud dalam hitungan detik, tanpa perlu API/login apapun di sini.
+// Lihat panduan lengkap di Panel Admin.
+const AUTO_BACKUP_INTERVAL_DAYS=3;
+function checkAutoBackup(){
+  const ts=parseInt(localStorage.getItem('bl_last_backup_ts')||'0');
+  const days=ts?Math.floor((Date.now()-ts)/86400000):null;
+  if(days===null||days>=AUTO_BACKUP_INTERVAL_DAYS){
+    setTimeout(()=>toast('🔄 Menyiapkan backup otomatis 3-harian...','ok'),800);
+    setTimeout(()=>{
+      backupData();
+      toast('💾 Backup otomatis tersimpan — pastikan folder unduhan sudah ter-sync ke Google Drive','ok');
+    },2200);
+  }
+}
+
+// ══ PAGES ══════════════════════════════════════
+function showPage(p){
+  if(p==='admin'&&(!session||session.role!=='admin')){toast('Halaman ini khusus untuk Admin','err');return}
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(el=>el.classList.remove('active'));
+  const key=p.charAt(0).toUpperCase()+p.slice(1);
+  document.getElementById('page'+key).classList.add('active');
+  document.getElementById('nav'+key).classList.add('active');
+  if(p==='member')renderMembers();
+  if(p==='kas')renderKas();
+  if(p==='laporan')renderLaporan();
+  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();}
+}
+
+// ══ MEMBER DB ══════════════════════════════════
+function getMembers(){const r=localStorage.getItem('bl_members_global');return r?JSON.parse(r):[]}
+function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a))}
+function getMemberById(id){return getMembers().find(m=>m.id===id)||null}
+function getMemberByRfid(rfid){return getMembers().find(m=>m.rfid===rfid)||null}
+function getMemberByHp(hp){return getMembers().find(m=>m.hp===hp)||null}
+function genRfid(){return'RF-'+Math.random().toString(36).substr(2,8).toUpperCase()}
+function getTier(p){if(p>=300)return'Diamond';if(p>=150)return'Platinum';if(p>=60)return'Gold';if(p>=20)return'Silver';return'Regular'}
+const TIER_INFO={
+  Regular:{min:0,max:19,reward:'Belum dapat hadiah',icon:'⚪',cls:'regular'},
+  Silver:{min:20,max:59,reward:'Sunlight 1 pcs',icon:'🥈',cls:'silver'},
+  Gold:{min:60,max:149,reward:'Minyak Makan 2 Liter',icon:'🥇',cls:'gold'},
+  Platinum:{min:150,max:299,reward:'Beras 5 kg',icon:'🏆',cls:'platinum'},
+  Diamond:{min:300,max:null,reward:'Hadiah Eksklusif BRILink Acik',icon:'💎',cls:'diamond'}
+};
+function tierRewardText(tier){return TIER_INFO[tier]?TIER_INFO[tier].reward:''}
+function tierRangeText(tier){const t=TIER_INFO[tier];return t.max?`${t.min}–${t.max} poin`:`${t.min}+ poin`}
+function buildTierPromoHtml(){
+  return Object.keys(TIER_INFO).map(tier=>{
+    const t=TIER_INFO[tier];
+    return`<div class="tp-card">
+      <div class="tp-head ${t.cls}">
+        <span class="tp-icon">${t.icon}</span>
+        <div class="tp-name">${tier}</div>
+        <div class="tp-range">${tierRangeText(tier)}</div>
+      </div>
+      <div class="tp-body">
+        <div class="tp-reward-ic">🎁</div>
+        <div class="tp-reward-txt">${t.reward}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function buildCdTierPromoHtml(){
+  return Object.keys(TIER_INFO).map(tier=>{
+    const t=TIER_INFO[tier];
+    return`<div class="cd-tp-card">
+      <div class="cd-tp-head ${t.cls}">
+        <span class="cd-tp-icon">${t.icon}</span>
+        <div class="cd-tp-name">${tier}</div>
+        <div class="cd-tp-range">${tierRangeText(tier)}</div>
+      </div>
+      <div class="cd-tp-body">
+        <div class="cd-tp-reward-ic">🎁</div>
+        <div class="cd-tp-reward-txt">${t.reward}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function calcPts(n){return 1}
+
+// ══ TRANSACTIONS ═══════════════════════════════
+let data=[];
+function storageKey(){return'bl_trx_'+session.user+'_'+todayISO()}
+function counterKey(){return'bl_ctr_'+session.user+'_'+todayISO()}
+function loadData(){
+  const r=localStorage.getItem(storageKey());data=r?JSON.parse(r):[];
+  const sel=document.getElementById('fltJenis');
+  sel.innerHTML='<option value="">Semua jenis</option>';
+  jenisList.forEach(j=>{const o=document.createElement('option');o.value=j.label;o.textContent=j.label;sel.appendChild(o)});
+}
+function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data))}
+function getCounter(){return parseInt(localStorage.getItem(counterKey())||'0')}
+function setCounter(n){localStorage.setItem(counterKey(),String(n))}
+function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(getCounter()+1).padStart(3,'0')}
+
+// ══ AUDIT LOG ══════════════════════════════════
+function logAudit(aksi,detail){
+  const logs=JSON.parse(localStorage.getItem('bl_audit')||'[]');
+  logs.push({waktu:new Date().toLocaleString('id-ID'),ts:Date.now(),aksi,oleh:session?session.nama:'-',cabang:session?session.label:'-',detail});
+  if(logs.length>2000)logs.shift();
+  localStorage.setItem('bl_audit',JSON.stringify(logs));
+}
+
+// ══ SETTINGS (global, cross-branch) ════════════
+function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;return s}
+function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s))}
+
+// ══ KAS FISIK & SALDO CHANNEL (BRI / Bank Transfer) ════════
+// Model agen BRILink — kas fisik (uang tunai) dan saldo rekening/channel
+// SELALU bergerak berlawanan arah untuk setiap transaksi:
+//  - Tarik Tunai   -> agen menyerahkan uang tunai ke customer: KAS FISIK BERKURANG sebesar nominal.
+//                     Bank mengganti/reimburse dana tsb ke rekening channel agen: SALDO CHANNEL BERTAMBAH sebesar nominal.
+//  - Setor Tunai, Transfer, Top Up, dan semua pembayaran tagihan (listrik/BPJS/PDAM/internet/pulsa/dll)
+//                  -> customer menyerahkan uang tunai ke agen: KAS FISIK BERTAMBAH sebesar nominal.
+//                     Saldo channel agen dipakai untuk pemindahan dana tsb, DITAMBAH biaya admin yang
+//                     dipotong sistem bank: SALDO CHANNEL BERKURANG sebesar (nominal + biaya admin).
+//  - Fee Agen adalah keuntungan/komisi milik agen. Berapa pun jenis transaksinya, fee agen OTOMATIS
+//    menambah KAS FISIK (uang yang menjadi hak/untung agen langsung tercatat sebagai kas).
+//  - Pemindahan Saldo (manual) memungkinkan staff memindahkan dana antara Kas Tunai, Saldo BRI,
+//    dan Saldo Bank Transfer secara manual (misal: setor kas berlebih ke bank, atau pindahkan
+//    saldo BRI yang menumpuk ke Bank Transfer supaya ada saldo untuk transaksi berikutnya).
+const CHANNELS=['BRI','TRF'];
+const CHANNEL_META={BRI:{cls:'bri',short:'BRI',full:'Bank BRI'},TRF:{cls:'transfer',short:'TRF',full:'Bank Transfer'}};
+function channelFull(ch){return CHANNEL_META[ch]?CHANNEL_META[ch].full:(ch||'')}
+const SALDO_EFFECT={
+  'Tarik Tunai':'plus',
+  'Setor Tunai':'minus',
+  'Transfer BRI':'minus','Transfer Bank Lain':'minus',
+  'Top Up BRIZZI':'minus','Top Up DANA':'minus','Top Up OVO':'minus','Top Up GoPay':'minus','Top Up ShopeePay':'minus',
+  'Pulsa':'minus','Paket Data':'minus','Token PLN':'minus','Bayar PLN':'minus','Bayar BPJS':'minus',
+  'Bayar PDAM':'minus','Bayar Internet':'minus','Bayar Multifinance':'minus','Lainnya':'minus'
+};
+// Kas fisik & saldo bank TIDAK di-scope per tanggal — supaya saldo malam ini otomatis
+// jadi saldo awal besok pagi (staff tinggal cocokkan dengan uang fisik/mutasi bank real).
+// Hanya berubah kalau ada yang sengaja mengubahnya lewat "Atur Saldo" (bisa dilakukan
+// oleh akun cabang manapun untuk saldo cabangnya sendiri, tidak harus Admin).
+function kasFisikKey(){return'bl_kasfisik_'+session.user}
+function getKasFisikAwal(){const r=localStorage.getItem(kasFisikKey());return r?(JSON.parse(r).awal||0):0}
+function setKasFisikAwal(n){localStorage.setItem(kasFisikKey(),JSON.stringify({awal:n}))}
+function saldoChannelKey(ch){return'bl_saldo_'+ch+'_'+session.user}
+function getSaldoAwal(ch){const r=localStorage.getItem(saldoChannelKey(ch));return r?(JSON.parse(r).awal||0):0}
+function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.stringify({awal:n}))}
+
+// ══ RESET-MARKER MECHANISM (dipakai oleh "Atur Saldo") ═══════
+// Tidak menghapus riwayat transaksi (tetap utuh untuk Laporan), hanya menandai titik waktu
+// supaya perhitungan saldo/kas berjalan ulang dari angka baru sejak saat itu — berlaku terus
+// lintas hari sampai Admin mengubahnya lagi.
+function kasResetKey(){return'bl_kasreset_'+session.user}
+function getKasResetAt(){return parseInt(localStorage.getItem(kasResetKey())||'0')}
+function setKasResetAt(ts){localStorage.setItem(kasResetKey(),String(ts))}
+function saldoResetKey(ch){return'bl_saldoreset_'+ch+'_'+session.user}
+function getSaldoResetAt(ch){return parseInt(localStorage.getItem(saldoResetKey(ch))||'0')}
+function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts))}
+function isAdmin(){return!!(session&&session.role==='admin')}
+
+// Scan seluruh riwayat transaksi/pemindahan milik user ini lintas hari (untuk hitung saldo berjalan)
+function scanAllTrxForUser(){
+  const prefix='bl_trx_'+session.user+'_';
+  const rows=[];
+  Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
+  });
+  return rows;
+}
+function scanAllPindahForUser(){
+  const prefix='bl_pindah_'+session.user+'_';
+  const rows=[];
+  Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
+  });
+  return rows;
+}
+
+// ══ PEMINDAHAN SALDO (manual: Kas ⇄ Saldo BRI ⇄ Saldo Bank Transfer) ═
+function pindahKey(){return'bl_pindah_'+session.user+'_'+todayISO()}
+function getPindahList(){const r=localStorage.getItem(pindahKey());return r?JSON.parse(r):[]}
+function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a))}
+function labelSisi(k){return k==='KAS'?'Kas Tunai':(CHANNEL_META[k]?CHANNEL_META[k].full:k)}
+function prosesPindah(){
+  const dari=document.getElementById('pindahDari').value;
+  const ke=document.getElementById('pindahKe').value;
+  const nominal=parseInt((document.getElementById('pindahNominal').value||'0').replace(/\D/g,''))||0;
+  const adminFee=parseInt((document.getElementById('pindahAdmin').value||'0').replace(/\D/g,''))||0;
+  const ket=document.getElementById('pindahKet').value.trim();
+  if(dari===ke){toast('Sisi "Dari" dan "Ke" tidak boleh sama','err');return}
+  if(!nominal||nominal<=0){toast('Masukkan nominal yang valid','err');return}
+  const list=getPindahList();
+  list.push({id:'PD-'+Date.now(),waktu:nowTime(),ts:Date.now(),dari,ke,nominal,admin:adminFee,ket,oleh:session.nama});
+  savePindahList(list);
+  logAudit('PEMINDAHAN_SALDO',labelSisi(dari)+' → '+labelSisi(ke)+' sebesar '+fmtRp(nominal)+(adminFee?' (biaya admin '+fmtRp(adminFee)+')':'')+(ket?' · '+ket:''));
+  closeModal('modalPindah');renderKas();
+  toast('✓ Pemindahan saldo berhasil dicatat','ok');
+}
+
+function hitungKas(excludeTs){
+  const kasAwal=getKasFisikAwal();
+  const kasResetAt=getKasResetAt();
+  let kasPlus=0,kasMinus=0,tarikTotal=0,totalFeeAgen=0;
+  const saldo={};
+  const saldoResetAt={};
+  CHANNELS.forEach(ch=>{saldo[ch]={awal:getSaldoAwal(ch),plus:0,minus:0};saldoResetAt[ch]=getSaldoResetAt(ch)});
+
+  // Saldo/kas berjalan dihitung dari SELURUH riwayat transaksi lintas hari (sejak titik reset terakhir)
+  scanAllTrxForUser().forEach(r=>{
+    if(excludeTs&&r.ts===excludeTs)return;
+    const eff=SALDO_EFFECT[r.jenis];
+    const ch=CHANNELS.includes(r.channel)?r.channel:'BRI';
+    const ts=r.ts||1;
+    const kOK=ts>kasResetAt, sOK=ts>saldoResetAt[ch];
+    if(eff==='plus'){
+      // Tarik Tunai: kas keluar sebesar nominal, saldo direimburse sebesar nominal
+      if(sOK)saldo[ch].plus+=r.nominal;
+      if(kOK)kasMinus+=r.nominal;
+    } else {
+      // Pemindahan (Setor/Transfer/Top Up/Bayar): kas masuk sebesar nominal,
+      // saldo terpotong sebesar nominal + biaya admin
+      if(sOK)saldo[ch].minus+=(r.nominal+(r.admin||0));
+      if(kOK)kasPlus+=r.nominal;
+    }
+    // Fee agen = keuntungan agen, otomatis menambah kas apa pun jenis transaksinya
+    if(kOK)kasPlus+=(r.fee||0);
+  });
+
+  // Fee agen & total tarik tunai hari ini WAJIB reset tiap pergantian hari — jadi ini dihitung
+  // khusus dari transaksi HARI INI saja (`data`), dan TIDAK dipengaruhi reset kas/saldo Admin.
+  data.forEach(r=>{
+    if(r.jenis==='Tarik Tunai')tarikTotal+=r.nominal;
+    totalFeeAgen+=(r.fee||0);
+  });
+
+  // Biaya admin dari Pemindahan Saldo HARI INI — ini mengurangi untung bersih agen,
+  // karena biaya ini ditanggung sendiri oleh agen, bukan oleh customer.
+  let totalBiayaPemindahanHariIni=0;
+  getPindahList().forEach(p=>{totalBiayaPemindahanHariIni+=(p.admin||0)});
+  const untungBersihHariIni=totalFeeAgen-totalBiayaPemindahanHariIni;
+
+  // Pemindahan saldo manual antar Kas / BRI / Bank Transfer (lintas hari juga)
+  scanAllPindahForUser().forEach(p=>{
+    if(excludeTs&&p.ts===excludeTs)return;
+    const ts=p.ts||1;
+    const biayaAdmin=p.admin||0;
+    if(p.dari==='KAS'){if(ts>kasResetAt)kasMinus+=(p.nominal+biayaAdmin);}
+    else if(saldo[p.dari]&&ts>saldoResetAt[p.dari])saldo[p.dari].minus+=(p.nominal+biayaAdmin);
+    if(p.ke==='KAS'){if(ts>kasResetAt)kasPlus+=p.nominal;}
+    else if(saldo[p.ke]&&ts>saldoResetAt[p.ke])saldo[p.ke].plus+=p.nominal;
+  });
+  CHANNELS.forEach(ch=>{saldo[ch].akhir=saldo[ch].awal+saldo[ch].plus-saldo[ch].minus});
+  const kasAkhir=kasAwal+kasPlus-kasMinus;
+  let totalSaldoKeseluruhan=kasAkhir;
+  CHANNELS.forEach(ch=>{totalSaldoKeseluruhan+=saldo[ch].akhir});
+  return{kasAwal,kasPlus,kasMinus,kasAkhir,tarikTotal,totalFeeAgen,totalBiayaPemindahanHariIni,untungBersihHariIni,totalSaldoKeseluruhan,saldo};
+}
+function renderKas(){
+  if(!session)return;
+  const k=hitungKas();
+  const settings=getSettings();
+  document.getElementById('kasAkhir').textContent=fmtRp(k.kasAkhir);
+  document.getElementById('kasFeeToday').textContent=fmtRp(k.totalFeeAgen);
+  document.getElementById('kasBiayaPemindahan').textContent='- '+fmtRp(k.totalBiayaPemindahanHariIni);
+  document.getElementById('kasUntungBersih').textContent=fmtRp(k.untungBersihHariIni);
+  document.getElementById('totalSaldoKeseluruhan').textContent=fmtRp(k.totalSaldoKeseluruhan);
+  document.getElementById('totalModalBreakdown').textContent='Kas '+fmtRp(k.kasAkhir)+' · BRI '+fmtRp(k.saldo.BRI.akhir)+' · Bank Transfer '+fmtRp(k.saldo.TRF.akhir);
+  document.getElementById('kasLimitTarikTxt').textContent=settings.limitTarikTunai>0?fmtRp(settings.limitTarikTunai):'Tanpa batas';
+  document.getElementById('kasLimitTransferTxt').textContent=settings.limitTransfer>0?fmtRp(settings.limitTransfer):'Tanpa batas';
+
+  const grid=document.getElementById('bankGrid');
+  if(grid){
+    grid.innerHTML=CHANNELS.map(ch=>{
+      const s=k.saldo[ch];const meta=CHANNEL_META[ch];
+      return`<div class="bank-card">
+        <div class="bank-card-head ${meta.cls}">
+          <div class="bank-card-badge">${meta.short}</div>
+          <div style="flex:1"><div class="bank-card-name">${meta.full}</div></div>
+        </div>
+        <div class="bank-card-final"><span class="l">Saldo Sekarang</span><span class="v">${fmtRp(s.akhir)}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  const pindahList=getPindahList().slice().reverse();
+  const histEl=document.getElementById('pindahHistList');
+  if(histEl){
+    histEl.innerHTML=pindahList.length?pindahList.map(p=>`<div class="hist-row">
+      <div class="hist-ic">🔁</div>
+      <div class="hist-l">
+        <div class="hist-no">${p.waktu} · ${p.oleh}</div>
+        <div class="hist-jns">${labelSisi(p.dari)} → ${labelSisi(p.ke)}</div>
+        ${p.admin?`<div class="hist-tgl">Biaya admin ${fmtRp(p.admin)}</div>`:''}
+        ${p.ket?`<div class="hist-tgl">${p.ket}</div>`:''}
+      </div>
+      <div class="hist-r"><div class="hist-nom">${fmtRp(p.nominal)}</div></div>
+    </div>`).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">🔁</span>Belum ada pemindahan saldo hari ini</div>';
+  }
+}
+function openPindahSaldo(){
+  document.getElementById('pindahDari').value='KAS';
+  document.getElementById('pindahKe').value='BRI';
+  document.getElementById('pindahNominal').value='';
+  document.getElementById('pindahAdmin').value='';
+  document.getElementById('pindahKet').value='';
+  openModal('modalPindah');
+}
+function openSetSaldo(){
+  // Tampilkan angka yang BENAR-BENAR sedang berjalan sekarang (bukan angka "awal" yang tersimpan lama),
+  // supaya tidak bingung seperti kasus saldo Bank Transfer sudah Rp11 juta tapi form menunjukkan 0.
+  const k=hitungKas();
+  document.getElementById('saldoInputKas').value=k.kasAkhir?k.kasAkhir.toLocaleString('id-ID'):'';
+  CHANNELS.forEach(ch=>{
+    const el=document.getElementById('saldoInput'+ch);
+    if(el)el.value=k.saldo[ch].akhir?k.saldo[ch].akhir.toLocaleString('id-ID'):'';
+  });
+  openModal('modalSaldo');
+}
+function simpanSaldo(){
+  const now=Date.now();
+  const vKas=parseInt((document.getElementById('saldoInputKas').value||'0').replace(/\D/g,''))||0;
+  // Set nilai baru sebagai titik awal baru, dan tandai waktu reset supaya transaksi-transaksi
+  // sebelumnya tidak lagi ikut terhitung — sehingga angka yang tampil = persis yang diketik.
+  setKasFisikAwal(vKas);setKasResetAt(now);
+  let detail='Kas tunai → '+fmtRp(vKas);
+  CHANNELS.forEach(ch=>{
+    const el=document.getElementById('saldoInput'+ch);
+    const v=parseInt((el.value||'0').replace(/\D/g,''))||0;
+    setSaldoAwal(ch,v);setSaldoResetAt(ch,now);
+    detail+=' · Saldo '+labelSisi(ch)+' → '+fmtRp(v);
+  });
+  closeModal('modalSaldo');renderKas();
+  logAudit('SET_SALDO',session.nama+' ('+session.label+') mengatur ulang saldo — '+detail);
+  toast('✓ Saldo berhasil diperbarui','ok');
+}
+
+// ══ CLOCK ══════════════════════════════════════
+function pad(n){return String(n).padStart(2,'0')}
+function nowTime(){const d=new Date();return pad(d.getHours())+'.'+pad(d.getMinutes())}
+function todayDisplay(){const d=new Date();return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+let _lastDay='';
+function tick(){
+  const d=new Date();
+  if(session){
+    const todayKey=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    if(_lastDay && _lastDay!==todayKey){
+      // Day changed — reload data and reset counter display
+      loadData();updateNoTrx();render();renderKas();
+    }
+    _lastDay=todayKey;
+    document.getElementById('topTime').textContent=['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()]+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+    document.getElementById('mTgl').textContent=todayDisplay();
+    document.getElementById('mJam').textContent=nowTime();
+  }
+}
+setInterval(tick,1000);
+
+// ══ MONEY FORMAT ═══════════════════════════════
+function fmtMoney(inp){
+  const raw=inp.value.replace(/\D/g,'');
+  inp.value=raw?parseInt(raw,10).toLocaleString('id-ID'):'';
+  updatePreview();
+}
+function parseMoney(inp){return parseInt((document.getElementById(inp).value||'0').replace(/\./g,'').replace(/,/g,''))||0}
+function fmtRp(n){return'Rp '+Math.round(n||0).toLocaleString('id-ID')}
+function fmtMoney2(inp){const raw=inp.value.replace(/\D/g,'');inp.value=raw?parseInt(raw,10).toLocaleString('id-ID'):''}
+
+function updatePreview(){
+  const nom=parseMoney('fNominal'),adm=parseMoney('fAdmin'),fee=parseMoney('fFee');
+  document.getElementById('pvNominal').textContent=fmtRp(nom);
+  document.getElementById('pvAdmin').textContent=fmtRp(adm);
+  document.getElementById('pvFee').textContent=fmtRp(fee);
+  const pts=currentRfid?calcPts(nom):0;
+  const poinRow=document.getElementById('pvPoinRow');
+  if(pts>0&&currentRfid){poinRow.style.display='flex';document.getElementById('pvPoin').textContent='+'+pts+' poin';}
+  else{poinRow.style.display='none';}
+
+  // Sinkron ke Layar Customer: tampilkan member + transaksi yang sedang diketik kasir
+  if(currentRfid){
+    const jenis=document.getElementById('fJenis').value;
+    const sedangTransaksi=jenis&&nom>0?{jenis,nominal:nom,poin:calcPts(nom)}:null;
+    cdMemberState(currentRfid,sedangTransaksi);
+  } else if(session){
+    cdIdleState();
+  }
+}
+
+// ══ JENIS ══════════════════════════════════════
+const jenisList=[
+  {label:'Tarik Tunai',icon:'💸',color:'c-blue'},{label:'Setor Tunai',icon:'💰',color:'c-green'},
+  {label:'Transfer BRI',icon:'🔄',color:'c-purple'},{label:'Transfer Bank Lain',icon:'🏦',color:'c-indigo'},
+  {label:'Top Up BRIZZI',icon:'💳',color:'c-amber'},{label:'Top Up DANA',icon:'💙',color:'c-blue'},
+  {label:'Top Up OVO',icon:'🟣',color:'c-purple'},{label:'Top Up GoPay',icon:'🟢',color:'c-green'},
+  {label:'Top Up ShopeePay',icon:'🧡',color:'c-amber'},{label:'Pulsa',icon:'📱',color:'c-teal'},
+  {label:'Paket Data',icon:'📶',color:'c-teal'},{label:'Token PLN',icon:'⚡',color:'c-amber'},
+  {label:'Bayar PLN',icon:'💡',color:'c-amber'},{label:'Bayar BPJS',icon:'🏥',color:'c-red'},
+  {label:'Bayar PDAM',icon:'💧',color:'c-blue'},{label:'Bayar Internet',icon:'🌐',color:'c-indigo'},
+  {label:'Bayar Multifinance',icon:'🏢',color:'c-gray'},{label:'Lainnya',icon:'📋',color:'c-gray'},
+];
+function buildJenisGrid(){
+  const g=document.getElementById('jenisGrid');g.innerHTML='';
+  jenisList.forEach(j=>{
+    const b=document.createElement('button');b.type='button';b.className='jb';b.dataset.val=j.label;
+    b.innerHTML=`<span class="jb-icon">${j.icon}</span>${j.label}`;
+    b.onclick=()=>{document.querySelectorAll('.jb').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('fJenis').value=j.label;updatePreview();};
+    g.appendChild(b);
+  });
+}
+function pilihChannel(btn){
+  document.querySelectorAll('.bkp-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('fChannel').value=btn.dataset.val;
+}
+
+// ══ RFID ════════════════════════════════════════
+let currentRfid=null;
+function toggleRfidInput(){
+  if(currentRfid)return;
+  const row=document.getElementById('rfidSearchRow');
+  row.style.display=row.style.display==='none'?'flex':'none';
+  if(row.style.display==='flex')setTimeout(()=>document.getElementById('rfidQ').focus(),50);
+}
+function searchRfid(){
+  const q=document.getElementById('rfidQ').value.trim();
+  if(!q)return;
+  const m=getMemberByRfid(q)||getMemberByHp(q);
+  if(m){applyRfid(m);document.getElementById('rfidQ').value='';}
+  else{toast('Member tidak ditemukan dalam database','err');}
+}
+function applyRfid(m){
+  currentRfid=m;
+  const z=document.getElementById('rfidZone');
+  z.classList.remove('scanning');z.classList.add('found');
+  document.getElementById('rfidDefault').style.display='none';
+  document.getElementById('rfidSearchRow').style.display='none';
+  const found=document.getElementById('rfidFound');found.style.display='block';
+  document.getElementById('rfidAv').textContent=m.nama.charAt(0).toUpperCase();
+  document.getElementById('rfidName').textContent=m.nama;
+  document.getElementById('rfidMeta').textContent=m.hp+' · '+m.rfid;
+  document.getElementById('rfidPts').textContent='⭐ '+m.poin+' poin · Tier '+getTier(m.poin);
+  document.getElementById('fNama').value=m.nama;
+  document.getElementById('fHP').value=m.hp;
+  updatePreview();
+  toast('✓ Member '+m.nama+' terdeteksi!','ok');
+}
+function clearRfid(e){
+  if(e)e.stopPropagation();
+  currentRfid=null;
+  const z=document.getElementById('rfidZone');
+  z.classList.remove('found','scanning');
+  document.getElementById('rfidDefault').style.display='flex';
+  document.getElementById('rfidFound').style.display='none';
+  document.getElementById('rfidSearchRow').style.display='none';
+  document.getElementById('fNama').value='';document.getElementById('fHP').value='';
+  updatePreview();
+}
+function simulateScan(rfid){
+  closeModal('modalSimRfid');showPage('kasir');
+  const z=document.getElementById('rfidZone');z.classList.add('scanning');
+  document.getElementById('rfidDefault').innerHTML='<div class="rfid-default-icon">📡</div><div class="rfid-default-text"><div class="t1">Membaca kartu...</div><div class="t2">Harap tunggu</div></div>';
+  setTimeout(()=>{
+    z.classList.remove('scanning');
+    document.getElementById('rfidDefault').innerHTML='<div class="rfid-default-icon">📡</div><div class="rfid-default-text"><div class="t1">Tap / ketik ID kartu member</div><div class="t2">Klik di sini untuk mencari member</div></div>';
+    const m=getMemberByRfid(rfid);
+    if(m)applyRfid(m);
+    else toast('Kartu tidak ditemukan','err');
+  },1000);
+}
+
+// ══ SIMPAN ══════════════════════════════════════
+function resetForm(){
+  clearRfid(null);
+  document.querySelectorAll('.jb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('fJenis').value='';document.getElementById('fChannel').value='BRI';
+  document.querySelectorAll('.bkp-btn').forEach(b=>b.classList.toggle('active',b.dataset.val==='BRI'));
+  ['fNama','fHP','fKet','fNominal','fAdmin','fFee'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fEditIdx').value='';
+  document.getElementById('editBanner').style.display='none';
+  document.getElementById('btnSimpanLabel').textContent='Simpan Transaksi';
+  updatePreview();updateNoTrx();
+}
+function editTransaksi(idx){
+  const r=data[idx];if(!r)return;
+  document.getElementById('fEditIdx').value=idx;
+  document.getElementById('fJenis').value=r.jenis;
+  document.querySelectorAll('.jb').forEach(b=>b.classList.toggle('active',b.dataset.val===r.jenis));
+  document.getElementById('fNama').value=r.nama||'';
+  document.getElementById('fHP').value=r.hp||'';
+  document.getElementById('fNominal').value=r.nominal?r.nominal.toLocaleString('id-ID'):'';
+  document.getElementById('fAdmin').value=r.admin?r.admin.toLocaleString('id-ID'):'';
+  document.getElementById('fFee').value=r.fee?r.fee.toLocaleString('id-ID'):'';
+  document.getElementById('fChannel').value=r.channel||'BRI';
+  document.querySelectorAll('.bkp-btn').forEach(b=>b.classList.toggle('active',b.dataset.val===(r.channel||'BRI')));
+  document.getElementById('fKet').value=r.ket||'';
+  currentRfid=null; // member link kept from original record unless a new card is scanned
+  updatePreview();
+  document.getElementById('editBanner').style.display='flex';
+  document.getElementById('editNoTrx').textContent=r.no+(r.memberNama?' · Member: '+r.memberNama:'');
+  document.getElementById('btnSimpanLabel').textContent='Update Transaksi';
+  showPage('kasir');
+  toast('Mode edit aktif untuk '+r.no,'ok');
+}
+function batalEdit(){resetForm();toast('Mode edit dibatalkan')}
+
+let pendingTrx=null;
+function simpan(){
+  const jenis=document.getElementById('fJenis').value;
+  const nominal=parseMoney('fNominal');
+  const admin=parseMoney('fAdmin');
+  const fee=parseMoney('fFee');
+  const channel=document.getElementById('fChannel').value;
+  const nama=document.getElementById('fNama').value.trim();
+  const hp=document.getElementById('fHP').value.trim();
+  const ket=document.getElementById('fKet').value.trim();
+  const editIdx=document.getElementById('fEditIdx').value;
+
+  if(!jenis){toast('Pilih jenis transaksi','err');return}
+  if(!nominal||nominal<=0){toast('Masukkan nominal transaksi yang valid','err');return}
+  if(!channel){toast('Pilih rekening bank yang dipakai','err');return}
+  if(hp && !/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
+
+  const payload={jenis,nominal,admin,fee,channel,nama,hp,ket,editIdx};
+
+  // ═ CEK SALDO / KAS CUKUP — hard block, tidak boleh sampai minus ═
+  const cukup=checkSaldoCukup(payload);
+  if(!cukup.ok){toast(cukup.msg,'err');return}
+
+  // ═ CEK LIMIT PER TRANSAKSI — Tarik Tunai & Transfer, butuh konfirmasi admin kalau melebihi ═
+  const lim=checkLimit(jenis,nominal);
+  if(lim.exceeded){
+    pendingTrx=payload;
+    openLimitOverride('Nominal '+lim.label+' ini '+fmtRp(nominal)+', melebihi limit per transaksi ('+fmtRp(lim.limit)+'). Masukkan akun Admin untuk mengizinkan transaksi ini.');
+    return;
+  }
+
+  commitTransaksi(payload);
+}
+
+function checkLimit(jenis,nominal){
+  const s=getSettings();
+  if(jenis==='Tarik Tunai' && s.limitTarikTunai>0 && nominal>s.limitTarikTunai)
+    return{exceeded:true,label:'Tarik Tunai',limit:s.limitTarikTunai};
+  if((jenis==='Transfer BRI'||jenis==='Transfer Bank Lain') && s.limitTransfer>0 && nominal>s.limitTransfer)
+    return{exceeded:true,label:'Transfer',limit:s.limitTransfer};
+  return{exceeded:false};
+}
+
+function checkSaldoCukup(payload){
+  const{jenis,nominal,admin,channel,editIdx}=payload;
+  const eff=SALDO_EFFECT[jenis];
+  // Kalau sedang edit transaksi lama, keluarkan dulu efek transaksi tsb dari perhitungan
+  let excludeTs=null;
+  if(editIdx!==''){const old=data[parseInt(editIdx)];if(old&&old.ts)excludeTs=old.ts;}
+  const k=hitungKas(excludeTs);
+
+  if(eff==='minus'){
+    const butuh=nominal+(admin||0);
+    const tersedia=k.saldo[channel]?k.saldo[channel].akhir:0;
+    if(butuh>tersedia){
+      return{ok:false,msg:'Saldo '+channelFull(channel)+' tidak cukup (sisa '+fmtRp(tersedia)+', butuh '+fmtRp(butuh)+'). Pindahkan saldo dulu di menu Kas & Saldo.'};
+    }
+  } else if(eff==='plus'){
+    if(nominal>k.kasAkhir){
+      return{ok:false,msg:'Kas tunai tidak cukup untuk Tarik Tunai ini (sisa kas '+fmtRp(k.kasAkhir)+'). Setor saldo ke kas dulu di menu Kas & Saldo.'};
+    }
+  }
+  return{ok:true};
+}
+
+function openLimitOverride(msg){
+  document.getElementById('limitOverrideMsg').textContent=msg;
+  document.getElementById('overrideAdminUser').value='';
+  document.getElementById('overrideAdminPass').value='';
+  openModal('modalLimitOverride');
+}
+async function confirmLimitOverride(){
+  const user=document.getElementById('overrideAdminUser').value.trim().toLowerCase();
+  const pass=document.getElementById('overrideAdminPass').value;
+  if(!user||!pass){toast('Masukkan username dan password admin','err');return}
+  const acc=await getAccounts();
+  const a=acc[user];
+  if(!a||a.role!=='admin'){toast('Akun admin tidak ditemukan','err');return}
+  const h=await hashPass(pass,a.salt);
+  if(h!==a.hash){toast('Password admin salah','err');return}
+  if(!pendingTrx){closeModal('modalLimitOverride');return}
+  const p=pendingTrx;pendingTrx=null;
+  closeModal('modalLimitOverride');
+  logAudit('OVERRIDE_LIMIT',p.jenis+' · '+fmtRp(p.nominal)+' melebihi limit, disetujui oleh admin '+a.label+' ('+user+')');
+  commitTransaksi(p);
+}
+
+function commitTransaksi(payload){
+  const{jenis,nominal,admin,fee,channel,nama,hp,ket,editIdx}=payload;
+
+  if(editIdx!==''){
+    // ═ UPDATE MODE ═
+    const idx=parseInt(editIdx);
+    const old=data[idx];
+    if(!old){toast('Transaksi tidak ditemukan','err');batalEdit();return}
+    const oldPoin=old.poinDapat||0;
+    const linkedMember=currentRfid?currentRfid.id:old.memberId;
+    const newPoin=linkedMember?calcPts(nominal):0;
+    data[idx]={...old,jenis,nama,hp,nominal,admin,fee,channel,ket,
+      memberId:linkedMember||null,
+      memberNama:currentRfid?currentRfid.nama:(old.memberNama||''),
+      memberRfid:currentRfid?currentRfid.rfid:(old.memberRfid||''),
+      poinDapat:newPoin};
+    if(old.memberId && old.memberId===linkedMember){
+      const members=getMembers();const mi=members.findIndex(m=>m.id===old.memberId);
+      if(mi>=0){
+        members[mi].poin=Math.max(0,(members[mi].poin||0)-oldPoin+newPoin);
+        members[mi].totalNominal=Math.max(0,(members[mi].totalNominal||0)-old.nominal+nominal);
+        saveMembers(members);
+      }
+    }
+    saveData();
+    logAudit('EDIT_TRANSAKSI',old.no+' · '+jenis+' · '+fmtRp(nominal));
+    toast('✓ '+old.no+' berhasil diperbarui','ok');
+    resetForm();render();renderKas();
+    return;
+  }
+
+  // ═ CREATE MODE ═
+  const ctr=getCounter()+1;setCounter(ctr);
+  const noTrx='TRX-'+String(ctr).padStart(3,'0');
+  const poin=currentRfid?calcPts(nominal):0;
+  const trx={
+    no:noTrx,tgl:todayISO(),tglDisplay:todayDisplay(),jam:nowTime(),ts:Date.now(),jenis,
+    nama,hp,nominal,admin,fee,channel,
+    petugas:session.nama,cabang:session.label,ket,
+    memberId:currentRfid?currentRfid.id:null,
+    memberNama:currentRfid?currentRfid.nama:'',
+    memberRfid:currentRfid?currentRfid.rfid:'',
+    poinDapat:poin
+  };
+  data.push(trx);
+  saveData();
+
+  let successMemberNama=null,successPoinBaru=0,successTotalPoin=0;
+  if(currentRfid&&poin>0){
+    const members=getMembers();
+    const idx=members.findIndex(m=>m.id===currentRfid.id);
+    successMemberNama=currentRfid.nama;successPoinBaru=poin;successTotalPoin=(currentRfid.poin||0)+poin;
+    if(idx>=0){members[idx].poin=(members[idx].poin||0)+poin;members[idx].totalTrx=(members[idx].totalTrx||0)+1;members[idx].totalNominal=(members[idx].totalNominal||0)+nominal;members[idx].lastTrx=todayISO();saveMembers(members);successTotalPoin=members[idx].poin;}
+    toast('✓ '+noTrx+' · Member +'+poin+' poin','ok');
+  } else {
+    toast('✓ '+noTrx+' berhasil disimpan','ok');
+  }
+  logAudit('TAMBAH_TRANSAKSI',noTrx+' · '+jenis+' · '+fmtRp(nominal));
+
+  resetForm();render();renderKas();
+  // Kirim status sukses SETELAH resetForm, supaya tidak langsung tertimpa broadcast idle dari clearRfid()
+  if(successMemberNama)cdSuccessState(successMemberNama,successPoinBaru,successTotalPoin);
+}
+
+// ══ FILTER & RENDER TRX ════════════════════════
+function getFiltered(){
+  const tgl=document.getElementById('fltTgl').value,jenis=document.getElementById('fltJenis').value;
+  const petugas=document.getElementById('fltPetugas').value.toLowerCase();
+  const cust=document.getElementById('fltCustomer').value.toLowerCase();
+  const noTrx=document.getElementById('fltNo').value.toLowerCase();
+  return data.filter(r=>{
+    if(tgl&&r.tgl!==tgl)return false;
+    if(jenis&&r.jenis!==jenis)return false;
+    if(petugas&&!r.petugas.toLowerCase().includes(petugas))return false;
+    if(cust&&!(r.nama||'').toLowerCase().includes(cust)&&!(r.memberNama||'').toLowerCase().includes(cust))return false;
+    if(noTrx&&!r.no.toLowerCase().includes(noTrx))return false;
+    return true;
+  });
+}
+function clearFilter(){['fltTgl','fltJenis','fltPetugas','fltCustomer','fltNo'].forEach(id=>document.getElementById(id).value='');filterChanged()}
+
+function jColor(j){const f=jenisList.find(x=>x.label===j);return f?f.color:'c-gray'}
+function jIcon(j){const f=jenisList.find(x=>x.label===j);return f?f.icon:'📋'}
+
+// ══ PAGINATION HELPERS ══════════════════════════
+function renderPagerHtml(page,totalPages,fnName){
+  if(totalPages<=1)return'';
+  let html=`<span>Halaman ${page} dari ${totalPages}</span><div>`;
+  html+=`<button ${page<=1?'disabled':''} onclick="${fnName}(${page-1})">‹ Prev</button>`;
+  let s=Math.max(1,page-2),e=Math.min(totalPages,s+4);s=Math.max(1,e-4);
+  for(let i=s;i<=e;i++)html+=`<button class="${i===page?'active':''}" onclick="${fnName}(${i})">${i}</button>`;
+  html+=`<button ${page>=totalPages?'disabled':''} onclick="${fnName}(${page+1})">Next ›</button></div>`;
+  return html;
+}
+let trxPage=1;const TRX_PAGE_SIZE=15;
+function goTrxPage(p){trxPage=p;render();window.scrollTo({top:0,behavior:'smooth'})}
+function filterChanged(){trxPage=1;render()}
+
+function render(){
+  const filtered=getFiltered();
+  const totalPages=Math.max(1,Math.ceil(filtered.length/TRX_PAGE_SIZE));
+  if(trxPage>totalPages)trxPage=totalPages;
+  if(trxPage<1)trxPage=1;
+  const start=(trxPage-1)*TRX_PAGE_SIZE;
+  const pageItems=filtered.slice(start,start+TRX_PAGE_SIZE);
+  const tbody=document.getElementById('tbody');
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><span class="empty-ic">🧾</span><strong>${data.length?'Tidak ada yang cocok':'Belum ada transaksi'}</strong><br><span style="font-size:12px">${data.length?'Coba ubah filter pencarian':'Mulai dengan mengisi form transaksi'}</span></div></td></tr>`;
+  } else {
+    tbody.innerHTML=pageItems.map(r=>{
+      const ri=data.indexOf(r);
+      const cc=jColor(r.jenis),ci=jIcon(r.jenis);
+      const mb=r.memberId?`<span class="chip c-member">💳 ${r.memberNama}</span>`:'<span style="color:var(--ink-300)">—</span>';
+      const chMeta=CHANNEL_META[r.channel];
+      const chBadge=chMeta?`<span class="ch-badge ${chMeta.cls}" style="width:20px;height:20px;font-size:7.5px;display:inline-flex;vertical-align:middle;margin-right:5px">${chMeta.short}</span>${chMeta.full}`:'—';
+      return`<tr>
+        <td><span class="trx-no">${r.no}</span></td>
+        <td style="font-weight:700;font-size:13px;color:var(--ink-950)">${r.jam}</td>
+        <td><span class="chip ${cc}">${ci} ${r.jenis}</span></td>
+        <td style="color:${r.nama?'var(--ink-700)':'var(--ink-300)'};font-size:13px">${r.nama||'—'}</td>
+        <td class="r" style="font-weight:700;color:var(--ink-950);font-family:var(--mono)">${fmtRp(r.nominal)}</td>
+        <td class="r" style="color:var(--ink-500);font-family:var(--mono)">${fmtRp(r.admin)}</td>
+        <td class="r" style="font-weight:700;color:var(--emerald-600);font-family:var(--mono)">${fmtRp(r.fee)}</td>
+        <td style="font-size:11.5px;font-weight:600;white-space:nowrap">${chBadge}</td>
+        <td>${mb}</td>
+        <td style="color:var(--ink-500);font-weight:500;font-size:12px">${r.petugas}</td>
+        <td style="display:flex;gap:3px">
+          <button class="del" style="color:var(--blue-600)" onclick="editTransaksi(${ri})" title="Edit transaksi">✎</button>
+          <button class="del" style="color:var(--emerald-700)" onclick="openStruk(data[${ri}])" title="Cetak struk">🖨</button>
+          <button class="del" onclick="hapus(${ri})" title="Hapus">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('tblCount').textContent=filtered.length+' transaksi';
+  document.getElementById('trxPager').innerHTML=renderPagerHtml(trxPage,totalPages,'goTrxPage');
+  renderStats(filtered);
+}
+function hapus(idx){
+  const r=data[idx];if(!r)return;
+  const reason=prompt('Alasan penghapusan transaksi '+r.no+' (wajib diisi, akan tercatat di log audit):');
+  if(reason===null)return;
+  if(!reason.trim()){toast('Penghapusan dibatalkan: alasan wajib diisi','err');return}
+  if(!confirm('Yakin ingin menghapus transaksi '+r.no+' ('+fmtRp(r.nominal)+')?'))return;
+  if(r.memberId && r.poinDapat){
+    const members=getMembers();const mi=members.findIndex(m=>m.id===r.memberId);
+    if(mi>=0){
+      members[mi].poin=Math.max(0,(members[mi].poin||0)-r.poinDapat);
+      members[mi].totalTrx=Math.max(0,(members[mi].totalTrx||0)-1);
+      members[mi].totalNominal=Math.max(0,(members[mi].totalNominal||0)-r.nominal);
+      saveMembers(members);
+    }
+  }
+  logAudit('HAPUS_TRANSAKSI',r.no+' · '+r.jenis+' · '+fmtRp(r.nominal)+' · Alasan: '+reason.trim());
+  data.splice(idx,1);saveData();render();renderKas();toast('Transaksi dihapus')
+}
+
+function renderStats(filtered){
+  const totNom=filtered.reduce((a,r)=>a+r.nominal,0);
+  const totAdm=filtered.reduce((a,r)=>a+r.admin,0);
+  const totFee=filtered.reduce((a,r)=>a+r.fee,0);
+  document.getElementById('statsRow').innerHTML=`
+    <div class="sc blue"><div class="sc-inner"><div><div class="sc-lbl">Total transaksi</div><div class="sc-num">${filtered.length}</div><div class="sc-sub">tersimpan</div></div><div class="sc-icon" style="background:var(--blue-lt)">🧾</div></div></div>
+    <div class="sc green"><div class="sc-inner"><div><div class="sc-lbl">Total nominal</div><div class="sc-num" style="font-size:17px">${fmtRp(totNom)}</div><div class="sc-sub">nilai transaksi</div></div><div class="sc-icon" style="background:var(--emerald-lt)">💰</div></div></div>
+    <div class="sc amber"><div class="sc-inner"><div><div class="sc-lbl">Total biaya admin</div><div class="sc-num" style="font-size:17px">${fmtRp(totAdm)}</div><div class="sc-sub">dari customer</div></div><div class="sc-icon" style="background:var(--amber-lt)">📋</div></div></div>
+    <div class="sc purple"><div class="sc-inner"><div><div class="sc-lbl">Total fee agen</div><div class="sc-num" style="font-size:17px;color:var(--emerald-600)">${fmtRp(totFee)}</div><div class="sc-sub">keuntungan agen</div></div><div class="sc-icon" style="background:var(--violet-lt)">✅</div></div></div>`;
+}
+
+// ══ MEMBER CRUD ═════════════════════════════════
+function openAddMember(){
+  document.getElementById('modalMemberTitle').textContent='Tambah Member Baru';
+  document.getElementById('editMemberId').value='';
+  ['mNama','mHp','mAlamat','mTglLahir'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mRfid').value=genRfid();
+  document.getElementById('mPoin').value='0';
+  openModal('modalMember');
+}
+function openEditMember(id){
+  const m=getMemberById(id);if(!m)return;
+  document.getElementById('modalMemberTitle').textContent='Edit Data Member';
+  document.getElementById('editMemberId').value=id;
+  document.getElementById('mNama').value=m.nama;
+  document.getElementById('mHp').value=m.hp;
+  document.getElementById('mRfid').value=m.rfid;
+  document.getElementById('mTglLahir').value=m.tglLahir||'';
+  document.getElementById('mAlamat').value=m.alamat||'';
+  document.getElementById('mPoin').value=m.poin||0;
+  openModal('modalMember');
+}
+function saveMember(){
+  const nama=document.getElementById('mNama').value.trim();
+  const hp=document.getElementById('mHp').value.trim();
+  const rfid=document.getElementById('mRfid').value.trim();
+  const poin=parseInt(document.getElementById('mPoin').value)||0;
+  if(!nama){toast('Nama tidak boleh kosong','err');return}
+  if(!hp){toast('No. HP tidak boleh kosong','err');return}
+  if(!/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
+  if(!rfid){toast('ID Kartu RFID tidak boleh kosong','err');return}
+  const members=getMembers();
+  const editId=document.getElementById('editMemberId').value;
+  if(members.find(m=>m.rfid===rfid&&m.id!==editId)){toast('ID Kartu sudah digunakan member lain','err');return}
+  if(members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
+  if(editId){
+    const idx=members.findIndex(m=>m.id===editId);
+    if(idx>=0)members[idx]={...members[idx],nama,hp,rfid,poin,tglLahir:document.getElementById('mTglLahir').value,alamat:document.getElementById('mAlamat').value.trim()};
+    toast('✓ Data member diperbarui','ok');
+  } else {
+    members.push({id:'M-'+Date.now(),nama,hp,rfid,poin,totalTrx:0,totalNominal:0,lastTrx:'',tglLahir:document.getElementById('mTglLahir').value,alamat:document.getElementById('mAlamat').value.trim(),tglDaftar:todayISO()});
+    toast('✓ Member baru berhasil didaftarkan','ok');
+  }
+  saveMembers(members);closeModal('modalMember');renderMembers();
+}
+function deleteMember(id){
+  const m=getMemberById(id);if(!m)return;
+  if(!confirm('Hapus member '+m.nama+'?'))return;
+  saveMembers(getMembers().filter(x=>x.id!==id));renderMembers();toast('Member dihapus');
+}
+function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
+function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
+
+function openMemberHistory(id){
+  const m=getMemberById(id);if(!m)return;
+  document.getElementById('histName').textContent=m.nama;
+  document.getElementById('histId').textContent=m.rfid+' · '+m.hp;
+  const allKeys=Object.keys(localStorage).filter(k=>k.startsWith('bl_trx_'));
+  let allTrx=[];
+  allKeys.forEach(k=>{try{JSON.parse(localStorage.getItem(k)).filter(r=>r.memberId===id).forEach(r=>allTrx.push({...r,_type:'trx'}))}catch(e){}});
+  const reds=getRedemptions().filter(r=>r.memberId===id).map(r=>({...r,_type:'redeem'}));
+  const combined=[...allTrx,...reds].sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.jam.localeCompare(a.jam));
+  const totNom=allTrx.reduce((a,r)=>a+r.nominal,0);
+  document.getElementById('histTotTrx').textContent=allTrx.length;
+  document.getElementById('histTotNom').textContent=fmtRp(totNom);
+  document.getElementById('histTotPoin').textContent=(m.poin||0)+' poin';
+  document.getElementById('histList').innerHTML=combined.length?combined.map(r=>{
+    if(r._type==='redeem'){
+      return`<div class="hist-row">
+        <div class="hist-ic">🎁</div>
+        <div class="hist-l">
+          <div class="hist-no">${r.id} · ${r.cabang||''}</div>
+          <div class="hist-jns">Tukar poin — ${r.ket}</div>
+          <div class="hist-tgl">${r.tglDisplay} ${r.jam}</div>
+        </div>
+        <div class="hist-r"><div class="hist-pts" style="color:var(--rose-600)">-${r.jumlah} poin</div></div>
+      </div>`;
+    }
+    return`<div class="hist-row">
+      <div class="hist-ic">${jIcon(r.jenis)}</div>
+      <div class="hist-l">
+        <div class="hist-no">${r.no} · ${r.cabang||''}</div>
+        <div class="hist-jns">${r.jenis}</div>
+        <div class="hist-tgl">${r.tglDisplay} ${r.jam}</div>
+      </div>
+      <div class="hist-r">
+        <div class="hist-nom">${fmtRp(r.nominal)}</div>
+        ${r.poinDapat?`<div class="hist-pts">+${r.poinDapat} poin</div>`:''}
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">📋</span>Belum ada riwayat transaksi</div>';
+  openModal('modalHistory');
+}
+
+// ══ REDEEM POIN ════════════════════════════════
+function openRedeem(id){
+  const m=getMemberById(id);if(!m)return;
+  document.getElementById('redeemMemberId').value=id;
+  document.getElementById('redeemMemberInfo').textContent=m.nama+' · Poin saat ini: '+(m.poin||0);
+  document.getElementById('redeemJumlah').value='';document.getElementById('redeemKet').value='';
+  openModal('modalRedeem');
+}
+function prosesRedeem(){
+  const id=document.getElementById('redeemMemberId').value;
+  const jumlah=parseInt(document.getElementById('redeemJumlah').value)||0;
+  const ket=document.getElementById('redeemKet').value.trim();
+  const members=getMembers();const mi=members.findIndex(m=>m.id===id);
+  if(mi<0)return;
+  if(jumlah<=0){toast('Masukkan jumlah poin yang valid','err');return}
+  if(jumlah>(members[mi].poin||0)){toast('Poin member tidak mencukupi','err');return}
+  if(!ket){toast('Isi keterangan penukaran poin','err');return}
+  members[mi].poin-=jumlah;
+  saveMembers(members);
+  const reds=getRedemptions();
+  reds.push({id:'RD-'+Date.now(),memberId:id,memberNama:members[mi].nama,jumlah,ket,tgl:todayISO(),tglDisplay:todayDisplay(),jam:nowTime(),oleh:session.nama,cabang:session.label});
+  saveRedemptions(reds);
+  logAudit('REDEEM_POIN',members[mi].nama+' menukar '+jumlah+' poin: '+ket);
+  closeModal('modalRedeem');renderMembers();toast('✓ Poin berhasil ditukar','ok');
+}
+
+// ══ RENDER MEMBERS — "physical card" visual treatment ═════════
+let memberPage=1;const MEMBER_PAGE_SIZE=12;
+function goMemberPage(p){memberPage=p;renderMembers();window.scrollTo({top:0,behavior:'smooth'})}
+function memberFilterChanged(){memberPage=1;renderMembers()}
+function clearMemberFilter(){['mSearch','mTier'].forEach(id=>document.getElementById(id).value='');memberFilterChanged()}
+function maskRfid(rfid){
+  const clean=(rfid||'').replace(/[^A-Za-z0-9]/g,'');
+  const groups=clean.match(/.{1,4}/g)||[clean];
+  return groups.join(' ');
+}
+function renderMembers(){
+  const q=(document.getElementById('mSearch').value||'').toLowerCase();
+  const tf=document.getElementById('mTier').value;
+  let members=getMembers();
+  if(q)members=members.filter(m=>m.nama.toLowerCase().includes(q)||m.hp.includes(q)||m.rfid.toLowerCase().includes(q));
+  if(tf)members=members.filter(m=>getTier(m.poin)===tf);
+  const grid=document.getElementById('memberGrid');
+  if(!members.length){
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:var(--ink-400)"><div style="font-size:40px;opacity:.3;margin-bottom:12px">💳</div><div style="font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink-500)">${getMembers().length?'Tidak ada member yang cocok':'Belum ada member terdaftar'}</div><div style="font-size:13px;margin-top:4px">Klik "+ Tambah Member" untuk mendaftarkan pelanggan</div></div>`;
+    document.getElementById('memberPager').innerHTML='';
+    return;
+  }
+  const totalPages=Math.max(1,Math.ceil(members.length/MEMBER_PAGE_SIZE));
+  if(memberPage>totalPages)memberPage=totalPages;
+  if(memberPage<1)memberPage=1;
+  const start=(memberPage-1)*MEMBER_PAGE_SIZE;
+  const pageMembers=members.slice(start,start+MEMBER_PAGE_SIZE);
+  document.getElementById('memberPager').innerHTML=renderPagerHtml(memberPage,totalPages,'goMemberPage');
+  grid.innerHTML=pageMembers.map(m=>{
+    const tier=getTier(m.poin);
+    const tierClass=tier.toLowerCase();
+    const pct=tier==='Diamond'?100:Math.min(100,Math.round((m.poin||0)/CD_TIER_NEXT[tier]*100));
+    return`<div class="mc">
+      <div class="mc-header ${tierClass}">
+        <div class="mc-toprow">
+          <div class="mc-chip"></div>
+          <div class="mc-tier-badge tb-${tierClass}">${TIER_INFO[tier].icon} ${tier}</div>
+        </div>
+        <div class="mc-cardnum">${maskRfid(m.rfid)}</div>
+        <div class="mc-bottomrow">
+          <div class="mc-name">${m.nama}</div>
+        </div>
+      </div>
+      <div class="mc-body">
+        <div class="mc-row"><span class="mc-rl">No. HP</span><span class="mc-rv">${m.hp}</span></div>
+        <div class="mc-row"><span class="mc-rl">ID Kartu</span><span class="mc-rv"><span class="rfid-pill">${m.rfid}</span></span></div>
+        <div class="mc-row"><span class="mc-rl">Total poin</span><span class="mc-rv pts">⭐ ${(m.poin||0).toLocaleString('id-ID')}</span></div>
+        <div class="mc-row"><span class="mc-rl">Hadiah tier ini</span><span class="mc-rv" style="color:var(--gold-600)">🎁 ${tierRewardText(tier)}</span></div>
+        <div class="mc-row"><span class="mc-rl">Transaksi</span><span class="mc-rv">${m.totalTrx||0}× · ${fmtRp(m.totalNominal||0)}</span></div>
+        <div class="mc-row"><span class="mc-rl">Terdaftar</span><span class="mc-rv">${m.tglDaftar||'—'}</span></div>
+        <div class="progress-wrap">
+          <div class="progress-lbl"><span>${tier==='Diamond'?'Tier tertinggi tercapai':'Progress tier berikutnya'}</span><span>${pct}%</span></div>
+          <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
+        </div>
+      </div>
+      <div class="mc-actions">
+        <button class="bsm bsm-blue" onclick="openMemberHistory('${m.id}')">📋 Riwayat</button>
+        <button class="bsm bsm-purple" onclick="simulateScan('${m.rfid}')">📡 Scan</button>
+        <button class="bsm bsm-amber" onclick="openRedeem('${m.id}')">🎁 Tukar</button>
+        <button class="bsm bsm-green" onclick="openEditMember('${m.id}')">✏️ Edit</button>
+        <button class="bsm bsm-red" onclick="deleteMember('${m.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ SIM RFID ═══════════════════════════════════
+function openSimRfid(){
+  const members=getMembers();
+  const list=document.getElementById('simRfidList');
+  if(!members.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink-400)">Belum ada member terdaftar</div>';}
+  else {
+    list.innerHTML=members.map(m=>{
+      const tier=getTier(m.poin);
+      return`<div onclick="simulateScan('${m.rfid}')" style="background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--violet-500)';this.style.background='var(--violet-lt)'" onmouseout="this.style.borderColor='var(--ink-200)';this.style.background='var(--paper-50)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--violet-600),var(--violet-500));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0">${m.nama.charAt(0).toUpperCase()}</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:13px;color:var(--ink-950)">${m.nama}</div><div style="font-size:10px;color:var(--ink-400);font-family:var(--mono);margin-top:2px">${m.rfid}</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--violet-600)">⭐ ${m.poin}</div><div style="font-size:10px;color:var(--ink-400)">${tier}</div></div>
+      </div>`;
+    }).join('');
+  }
+  openModal('modalSimRfid');
+}
+
+// ══ STRUK / CETAK ═══════════════════════════════
+let strukCurrent=null;
+function buildStrukHtml(r){
+  return`<div style="text-align:center;font-weight:700">BRILINK — ${(r.cabang||'').toUpperCase()}</div>
+<div style="text-align:center;font-size:10px;margin-bottom:6px">${r.tglDisplay} ${r.jam} · ${r.no}</div>
+--------------------------------
+Jenis     : ${r.jenis}
+Customer  : ${r.nama||'-'}
+No. HP    : ${r.hp||'-'}
+<div style="font-weight:700">Nominal   : ${fmtRp(r.nominal)}</div>
+Biaya Admin : ${fmtRp(r.admin)}
+Fee Agen  : ${fmtRp(r.fee)}
+Channel   : ${channelFull(r.channel)||'-'}
+${r.memberNama?`Member    : ${r.memberNama} (+${r.poinDapat||0} poin)\n`:''}Petugas   : ${r.petugas}
+--------------------------------
+<div style="text-align:center">Terima kasih 🙏<br>Simpan struk ini sebagai bukti transaksi</div>`;
+}
+function openStruk(trx){
+  strukCurrent=trx;
+  document.getElementById('strukPreview').innerHTML=buildStrukHtml(trx);
+  openModal('modalStruk');
+}
+function cetakStruk(){
+  if(!strukCurrent)return;
+  document.getElementById('strukPrintArea').innerHTML=buildStrukHtml(strukCurrent);
+  document.body.classList.add('printing-struk');
+  window.print();
+  setTimeout(()=>document.body.classList.remove('printing-struk'),400);
+}
+
+// ══ LAPORAN ═════════════════════════════════════
+function scanRangeTrx(dari,sampai){
+  const prefix='bl_trx_'+session.user+'_';
+  const keys=Object.keys(localStorage).filter(k=>k.startsWith(prefix));
+  let rows=[];
+  keys.forEach(k=>{
+    const tgl=k.slice(prefix.length);
+    if((!dari||tgl>=dari)&&(!sampai||tgl<=sampai)){
+      try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
+    }
+  });
+  return rows;
+}
+let _lapRows=[];
+function renderLaporan(){
+  if(!session)return;
+  if(!document.getElementById('lapDari').value&&!document.getElementById('lapSampai').value){
+    document.getElementById('lapDari').value=todayISO();
+    document.getElementById('lapSampai').value=todayISO();
+  }
+  const dari=document.getElementById('lapDari').value;
+  const sampai=document.getElementById('lapSampai').value;
+  const rows=scanRangeTrx(dari,sampai);
+  _lapRows=rows;
+  const byJenis={};
+  rows.forEach(r=>{
+    if(!byJenis[r.jenis])byJenis[r.jenis]={n:0,nom:0,adm:0,fee:0};
+    byJenis[r.jenis].n++;byJenis[r.jenis].nom+=r.nominal;byJenis[r.jenis].adm+=r.admin;byJenis[r.jenis].fee+=r.fee;
+  });
+  const jenisArr=Object.keys(byJenis).sort((a,b)=>byJenis[b].nom-byJenis[a].nom);
+  document.getElementById('lapBody').innerHTML=jenisArr.length?jenisArr.map(j=>{
+    const d=byJenis[j];
+    return`<tr><td><span class="chip ${jColor(j)}">${jIcon(j)} ${j}</span></td><td class="r">${d.n}</td><td class="r" style="font-weight:700;font-family:var(--mono)">${fmtRp(d.nom)}</td><td class="r" style="font-family:var(--mono)">${fmtRp(d.adm)}</td><td class="r" style="color:var(--emerald-600);font-weight:700;font-family:var(--mono)">${fmtRp(d.fee)}</td></tr>`;
+  }).join(''):'<tr><td colspan="5"><div class="empty"><span class="empty-ic">📊</span>Tidak ada data pada rentang tanggal ini</div></td></tr>';
+  document.getElementById('lapCount').textContent=jenisArr.length+' jenis';
+  const totTrx=rows.length,totNom=rows.reduce((a,r)=>a+r.nominal,0),totAdm=rows.reduce((a,r)=>a+r.admin,0),totFee=rows.reduce((a,r)=>a+r.fee,0);
+  document.getElementById('lapStatsRow').innerHTML=`
+    <div class="sc blue"><div class="sc-inner"><div><div class="sc-lbl">Total transaksi</div><div class="sc-num">${totTrx}</div><div class="sc-sub">${dari} s/d ${sampai}</div></div><div class="sc-icon" style="background:var(--blue-lt)">🧾</div></div></div>
+    <div class="sc green"><div class="sc-inner"><div><div class="sc-lbl">Total nominal</div><div class="sc-num" style="font-size:17px">${fmtRp(totNom)}</div></div><div class="sc-icon" style="background:var(--emerald-lt)">💰</div></div></div>
+    <div class="sc amber"><div class="sc-inner"><div><div class="sc-lbl">Total biaya admin</div><div class="sc-num" style="font-size:17px">${fmtRp(totAdm)}</div></div><div class="sc-icon" style="background:var(--amber-lt)">📋</div></div></div>
+    <div class="sc purple"><div class="sc-inner"><div><div class="sc-lbl">Total fee agen</div><div class="sc-num" style="font-size:17px;color:var(--emerald-600)">${fmtRp(totFee)}</div></div><div class="sc-icon" style="background:var(--violet-lt)">✅</div></div></div>`;
+}
+function exportLaporanExcel(){
+  if(!_lapRows.length){toast('Belum ada data pada rentang tanggal ini','err');return}
+  const wb=XLSX.utils.book_new();
+  const hdr=['No Trx','Tanggal','Jam','Jenis','Nama Customer','No HP','Nominal (Rp)','Admin (Rp)','Fee (Rp)','Channel','Member','Poin Didapat','Petugas','Cabang','Keterangan'];
+  const body=_lapRows.map(r=>[r.no,r.tglDisplay,r.jam,r.jenis,r.nama,r.hp,r.nominal,r.admin,r.fee,channelFull(r.channel),r.memberNama||'',r.poinDapat||0,r.petugas,r.cabang,r.ket]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...body]);
+  XLSX.utils.book_append_sheet(wb,ws,'Laporan');
+  const dari=document.getElementById('lapDari').value,sampai=document.getElementById('lapSampai').value;
+  XLSX.writeFile(wb,`BRILink_Laporan_${dari}_${sampai}.xlsx`);
+  logAudit('EXPORT_LAPORAN','Export laporan '+dari+' s/d '+sampai);
+  toast('✓ Laporan berhasil diunduh','ok');
+}
+
+// ══ ADMIN — AKUN CABANG ═════════════════════════
+async function renderAdminAccounts(){
+  const acc=await getAccounts();
+  document.getElementById('accBody').innerHTML=Object.keys(acc).sort().map(u=>{
+    const a=acc[u];
+    return`<tr>
+      <td style="font-family:var(--mono)">${u}</td>
+      <td>${a.label}</td>
+      <td><span class="chip ${a.role==='admin'?'c-purple':'c-blue'}">${a.role==='admin'?'⚙️ Admin':'🧾 Kasir'}</span></td>
+      <td style="display:flex;gap:4px">
+        <button class="bsm bsm-blue" onclick="openEditAccount('${u}')">✏️ Edit</button>
+        ${(!session||u!==session.user)?`<button class="bsm bsm-red" onclick="deleteAccount('${u}')">🗑</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+  const settings=getSettings();
+  document.getElementById('settingLimitTarik').value=(settings.limitTarikTunai||0).toLocaleString('id-ID');
+  document.getElementById('settingLimitTransfer').value=(settings.limitTransfer||0).toLocaleString('id-ID');
+}
+function openAddAccount(){
+  document.getElementById('editAccUser').value='';
+  document.getElementById('accUser').value='';document.getElementById('accUser').disabled=false;
+  document.getElementById('accLabel').value='';document.getElementById('accRole').value='kasir';document.getElementById('accPass').value='';
+  openModal('modalAccount');
+}
+async function openEditAccount(u){
+  const acc=await getAccounts();const a=acc[u];if(!a)return;
+  document.getElementById('editAccUser').value=u;
+  document.getElementById('accUser').value=u;document.getElementById('accUser').disabled=true;
+  document.getElementById('accLabel').value=a.label;document.getElementById('accRole').value=a.role||'kasir';document.getElementById('accPass').value='';
+  openModal('modalAccount');
+}
+async function saveAccount(){
+  const editUser=document.getElementById('editAccUser').value;
+  const user=document.getElementById('accUser').value.trim().toLowerCase();
+  const label=document.getElementById('accLabel').value.trim();
+  const role=document.getElementById('accRole').value;
+  const pass=document.getElementById('accPass').value;
+  if(!user||!label){toast('Username dan nama cabang wajib diisi','err');return}
+  const acc=await getAccounts();
+  if(!editUser){
+    if(acc[user]){toast('Username sudah digunakan','err');return}
+    if(!pass||pass.length<6){toast('Password minimal 6 karakter','err');return}
+    const salt=genSalt();
+    acc[user]={salt,hash:await hashPass(pass,salt),label,role};
+    logAudit('TAMBAH_AKUN','Akun baru: '+user+' ('+label+')');
+  } else {
+    acc[editUser].label=label;acc[editUser].role=role;
+    if(pass){
+      if(pass.length<6){toast('Password minimal 6 karakter','err');return}
+      const salt=genSalt();acc[editUser].salt=salt;acc[editUser].hash=await hashPass(pass,salt);
+    }
+    logAudit('EDIT_AKUN','Update akun: '+editUser);
+  }
+  saveAccounts(acc);closeModal('modalAccount');renderAdminAccounts();toast('✓ Akun disimpan','ok');
+}
+async function deleteAccount(u){
+  if(!confirm('Hapus akun '+u+'? Data transaksi cabang ini tidak akan terhapus.'))return;
+  const acc=await getAccounts();delete acc[u];saveAccounts(acc);
+  logAudit('HAPUS_AKUN','Akun dihapus: '+u);
+  renderAdminAccounts();toast('Akun dihapus');
+}
+function saveLimitSetting(){
+  const vTarik=parseInt((document.getElementById('settingLimitTarik').value||'0').replace(/\D/g,''))||0;
+  const vTransfer=parseInt((document.getElementById('settingLimitTransfer').value||'0').replace(/\D/g,''))||0;
+  const s=getSettings();s.limitTarikTunai=vTarik;s.limitTransfer=vTransfer;saveSettings(s);
+  logAudit('UBAH_PENGATURAN','Limit per transaksi diubah — Tarik Tunai: '+fmtRp(vTarik)+', Transfer: '+fmtRp(vTransfer));
+  toast('✓ Pengaturan disimpan','ok');renderKas();
+}
+
+// ══ ADMIN — AUDIT LOG ═══════════════════════════
+// ══ ADMIN — STATUS BACKUP ══════════════════════
+// ══ ADMIN — SINKRONISASI LAYAR CUSTOMER JARAK JAUH (Firebase) ══
+function renderFirebaseSyncUI(){
+  const cfg=getFirebaseConfig();
+  const input=document.getElementById('fbConfigInput');
+  const section=document.getElementById('fbLinkSection');
+  if(!input||!section)return;
+  if(cfg){
+    input.value=JSON.stringify(cfg,null,2);
+    section.style.display='block';
+    document.getElementById('fbCabangLabel').textContent=session?session.label+' ('+session.user+')':'—';
+    const url=remoteCustomerDisplayUrl();
+    document.getElementById('fbRemoteUrl').textContent=url;
+    document.getElementById('fbQrImg').src=url?('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url)):'';
+  } else {
+    section.style.display='none';
+  }
+}
+function saveFirebaseConfigUI(){
+  const raw=document.getElementById('fbConfigInput').value.trim();
+  if(!raw){toast('Tempel dulu config Firebase-nya','err');return}
+  let cfg;
+  try{cfg=JSON.parse(raw)}catch(e){toast('Format JSON tidak valid — cek lagi copy-paste-nya dari Firebase Console','err');return}
+  if(!cfg.databaseURL){toast('Config ini tidak punya "databaseURL" — pastikan Realtime Database sudah dibuat di Firebase Console','err');return}
+  setFirebaseConfig(cfg);
+  fbApp=null;fbDb=null; // reset supaya re-init pakai config baru
+  renderFirebaseSyncUI();
+  logAudit('SET_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh diaktifkan oleh '+session.nama);
+  toast('✓ Konfigurasi tersimpan — Layar Customer siap dipakai di device terpisah','ok');
+}
+function removeFirebaseConfigUI(){
+  if(!confirm('Hapus konfigurasi sinkronisasi jarak jauh? Layar customer di tablet/HP akan berhenti tersambung.'))return;
+  clearFirebaseConfig();
+  fbApp=null;fbDb=null;
+  document.getElementById('fbConfigInput').value='';
+  renderFirebaseSyncUI();
+  logAudit('HAPUS_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh dinonaktifkan oleh '+session.nama);
+  toast('Konfigurasi dihapus','ok');
+}
+function copyRemoteUrl(){
+  const url=document.getElementById('fbRemoteUrl').textContent;
+  if(!url)return;
+  navigator.clipboard.writeText(url).then(()=>toast('✓ Link disalin ke clipboard','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
+}
+function renderBackupStatus(){
+  const card=document.getElementById('backupStatusCard');
+  const icon=document.getElementById('backupStatusIcon');
+  const title=document.getElementById('backupStatusTitle');
+  const sub=document.getElementById('backupStatusSub');
+  if(!card)return;
+  const ts=parseInt(localStorage.getItem('bl_last_backup_ts')||'0');
+  card.classList.remove('ok','warn','danger');
+  if(!ts){
+    card.classList.add('danger');
+    icon.textContent='⚠️';
+    title.textContent='Belum pernah backup sama sekali';
+    sub.textContent='Backup otomatis akan jalan otomatis saat login berikutnya, atau klik tombol di samping sekarang juga.';
+    return;
+  }
+  const days=Math.floor((Date.now()-ts)/86400000);
+  const tgl=new Date(ts).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+  if(days<1){
+    card.classList.add('ok');icon.textContent='✅';
+    title.textContent='Data aman — backup otomatis terakhir hari ini';
+    sub.textContent='Terakhir: '+tgl+' · Backup otomatis berikutnya dalam '+(AUTO_BACKUP_INTERVAL_DAYS-days)+' hari';
+  } else if(days<AUTO_BACKUP_INTERVAL_DAYS){
+    card.classList.add('ok');icon.textContent='✅';
+    title.textContent='Backup terakhir '+days+' hari lalu';
+    sub.textContent='Terakhir: '+tgl+' · Backup otomatis berikutnya dalam '+(AUTO_BACKUP_INTERVAL_DAYS-days)+' hari (saat login)';
+  } else if(days<=7){
+    card.classList.add('warn');icon.textContent='🟡';
+    title.textContent='Sudah '+days+' hari — backup otomatis harusnya sudah jalan';
+    sub.textContent='Terakhir: '+tgl+' — kalau belum ke-download otomatis, coba logout lalu login lagi, atau klik "Backup Sekarang".';
+  } else {
+    card.classList.add('danger');icon.textContent='⚠️';
+    title.textContent='Sudah '+days+' hari TIDAK backup!';
+    sub.textContent='Terakhir: '+tgl+' — kemungkinan aplikasi ini sudah lama tidak dibuka. Backup sekarang untuk amankan data terbaru.';
+  }
+}
+function renderAuditLog(){
+  const logs=JSON.parse(localStorage.getItem('bl_audit')||'[]').slice().reverse().slice(0,300);
+  document.getElementById('auditCount').textContent=logs.length+' log';
+  document.getElementById('auditBody').innerHTML=logs.length?logs.map(l=>`<tr>
+    <td style="font-size:11px;color:var(--ink-500);white-space:nowrap;font-family:var(--mono)">${l.waktu}</td>
+    <td><span class="chip c-gray">${l.aksi}</span></td>
+    <td style="font-size:12px">${l.oleh}</td>
+    <td style="font-size:12px;color:var(--ink-500)">${l.cabang}</td>
+    <td style="font-size:12px;color:var(--ink-500)">${l.detail}</td>
+  </tr>`).join(''):'<tr><td colspan="5"><div class="empty"><span class="empty-ic">📜</span>Belum ada log aktivitas</div></td></tr>';
+}
+
+// ══ ADMIN — BACKUP / RESTORE ════════════════════
+function backupData(){
+  const backup={};
+  Object.keys(localStorage).forEach(k=>{backup[k]=localStorage.getItem(k)});
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date();
+  a.href=url;a.download=`BRILink_Backup_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+  localStorage.setItem('bl_last_backup_ts',String(Date.now()));
+  logAudit('BACKUP_DATA','Backup seluruh data diunduh');
+  toast('✓ Backup berhasil diunduh','ok');
+  renderBackupStatus();
+}
+function restoreData(file,inputId){
+  inputId=inputId||'restoreFile';
+  if(!file)return;
+  if(!confirm('Restore akan MENIMPA seluruh data di KOMPUTER INI (transaksi, member, saldo, kas, akun) dengan isi file backup. Lanjutkan?')){document.getElementById(inputId).value='';return}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const obj=JSON.parse(e.target.result);
+      Object.keys(obj).forEach(k=>localStorage.setItem(k,obj[k]));
+      logAudit('RESTORE_DATA','Data dipulihkan dari file backup: '+file.name+' oleh '+(session?session.nama+' ('+session.label+')':'-'));
+      toast('✓ Restore berhasil. Memuat ulang halaman...','ok');
+      setTimeout(()=>location.reload(),1200);
+    }catch(err){toast('File backup tidak valid atau rusak','err');}
+  };
+  reader.readAsText(file);
+}
+
+// ══ EXPORT ═════════════════════════════════════
+function exportExcel(){
+  if(!data.length){toast('Belum ada data','err');return}
+  const wb=XLSX.utils.book_new();
+  const hdr=['No Trx','Tanggal','Jam','Jenis','Nama Customer','No HP','Nominal (Rp)','Admin (Rp)','Fee (Rp)','Channel','ID Member','Nama Member','Poin Didapat','Petugas','Cabang','Keterangan'];
+  const rows=getFiltered().map(r=>[r.no,r.tglDisplay,r.jam,r.jenis,r.nama,r.hp,r.nominal,r.admin,r.fee,channelFull(r.channel),r.memberRfid||'',r.memberNama||'',r.poinDapat||0,r.petugas,r.cabang,r.ket]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:12},{wch:12},{wch:8},{wch:22},{wch:18},{wch:16},{wch:14},{wch:14},{wch:12},{wch:10},{wch:14},{wch:18},{wch:12},{wch:14},{wch:14},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Transaksi');
+  const d=new Date();
+  XLSX.writeFile(wb,`BRILink_${session.user}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`);
+  logAudit('EXPORT_EXCEL','Export transaksi harian');
+  toast('✓ File Excel berhasil diunduh','ok');
+}
+function exportMemberExcel(){
+  const members=getMembers();
+  if(!members.length){toast('Belum ada data member','err');return}
+  const wb=XLSX.utils.book_new();
+  const hdr=['ID Member','Nama','No HP','ID Kartu RFID','Tier','Total Poin','Total Transaksi','Total Nominal (Rp)','Tgl Lahir','Alamat','Tgl Daftar'];
+  const rows=members.map(m=>[m.id,m.nama,m.hp,m.rfid,getTier(m.poin),m.poin||0,m.totalTrx||0,m.totalNominal||0,m.tglLahir||'',m.alamat||'',m.tglDaftar||'']);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:16},{wch:20},{wch:16},{wch:16},{wch:10},{wch:10},{wch:12},{wch:16},{wch:12},{wch:24},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Database Member');
+  const d=new Date();
+  XLSX.writeFile(wb,`BRILink_Member_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.xlsx`);
+  toast('✓ Export member berhasil','ok');
+}
+
+// ══ MODALS ═════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.mo').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+// ══ PASS ════════════════════════════════════════
+function openChangePass(){closeUserMenu();['passOld','passNew','passConfirm'].forEach(id=>document.getElementById(id).value='');openModal('modalPass')}
+async function doChangePass(){
+  const old=document.getElementById('passOld').value,nw=document.getElementById('passNew').value,cf=document.getElementById('passConfirm').value;
+  const acc=await getAccounts();
+  const a=acc[session.user];
+  const oldHash=await hashPass(old,a.salt);
+  if(oldHash!==a.hash){toast('Password lama salah','err');return}
+  if(nw.length<6){toast('Min. 6 karakter','err');return}
+  if(nw!==cf){toast('Konfirmasi tidak cocok','err');return}
+  const salt=genSalt();a.salt=salt;a.hash=await hashPass(nw,salt);
+  saveAccounts(acc);closeModal('modalPass');
+  logAudit('GANTI_PASSWORD','Password diubah oleh '+session.nama);
+  toast('✓ Password berhasil diubah','ok');
+}
+
+// ══ USER MENU ══════════════════════════════════
+function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('open')}
+function closeUserMenu(){document.getElementById('userMenu').classList.remove('open')}
+document.addEventListener('click',e=>{if(!document.getElementById('topUserBtn').contains(e.target))closeUserMenu()});
+
+// ══ TOAST ══════════════════════════════════════
+let toastTimer;
+function toast(msg,type=''){
+  clearTimeout(toastTimer);
+  const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'');
+  requestAnimationFrame(()=>t.classList.add('show'));
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ══ CUSTOMER DISPLAY — jalankan di sini (paling akhir) supaya fmtRp/getTier sudah tersedia ══
+if(isCustomerDisplayMode()){
+  initCustomerDisplayWindow();
+}
+</script>
+</body>
+</html>
