@@ -1586,12 +1586,13 @@ function initCustomerDisplayWindow(){
       tries++;
       const db=initFirebaseIfPossible(cfg);
       if(db){
-        document.getElementById('cdModeBadge').textContent='🌐 Tersambung Jarak Jauh';
+        document.getElementById('cdModeBadge').style.display='none';
         db.ref('brilink_customer/'+cabangParam).on('value',snap=>{
           const val=snap.val();
           if(val)renderCustomerDisplay(val);
         },err=>{
           console.warn('Firebase listen error:',err);
+          document.getElementById('cdModeBadge').style.display='inline-flex';
           document.getElementById('cdModeBadge').textContent='⚠️ Gagal tersambung — cek internet';
         });
         return;
