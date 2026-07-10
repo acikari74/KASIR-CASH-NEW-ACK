@@ -1667,65 +1667,138 @@ function remoteCustomerDisplayUrl(){
 
 // ══ SINKRONISASI DATA UTAMA ANTAR DEVICE (Firebase) ══════════════
 // Fitur opsional: kalau Firebase sudah diatur di Panel Admin, akun cabang yang sama
-// (misal cabang1) bisa login di komputer/tablet manapun dan data transaksi, member,
-// kas/saldo, dll otomatis tersinkron — tidak lagi terkunci di 1 komputer saja.
-// Cara kerja: setiap kali ada perubahan data, seluruh data milik cabang itu dikirim
-// sebagai satu paket ke Firebase (mirip cara kerja Backup, tapi otomatis & real-time).
-// Device lain yang login dengan akun sama akan otomatis menerima update itu.
-function cloudSyncPath(user){return'brilink_sync/'+(user||session.user)}
-function collectUserDataForSync(){
+// (misal cabang1) bisa login di BEBERAPA device SEKALIGUS (2 kasir aktif bersamaan)
+// dan datanya tetap aman tersinkron, tidak saling menimpa.
+//
+// Cara kerja (PENTING, beda dari versi awal): data yang sering nambah (transaksi,
+// pemindahan, member, audit, redeem poin) disinkron SATU-SATU per catatan — masing-masing
+// punya "kotak" sendiri di Firebase (pakai id/timestamp unik). Jadi kalau device A dan
+// device B sama-sama menyimpan transaksi di detik yang sama, DUA-DUANYA tetap tersimpan,
+// tidak ada yang hilang atau ketiban punya device lain.
+//
+// Data yang jarang berubah & jarang dua device edit bersamaan (kas awal, saldo awal,
+// pengaturan limit, daftar akun) masih disinkron sebagai satu paket kecil — cukup aman
+// karena aksi ini jarang dilakukan berbarengan dari 2 device.
+function cloudBase(user){return'brilink_sync/'+(user||session.user)}
+function cloudStatePath(user){return cloudBase(user)+'/state'}
+function pushCloudRecord(kind,key,obj){
+  const db=initFirebaseIfPossible();
+  if(!db||!session)return;
+  try{db.ref(cloudBase()+'/'+kind+'/'+key).set(obj)}catch(e){console.warn('Cloud push record gagal:',e)}
+}
+function removeCloudRecord(kind,key){
+  const db=initFirebaseIfPossible();
+  if(!db||!session)return;
+  try{db.ref(cloudBase()+'/'+kind+'/'+key).remove()}catch(e){console.warn('Cloud remove record gagal:',e)}
+}
+function collectSmallStateForSync(){
   const snap={};
-  const userPrefixes=['bl_trx_'+session.user+'_','bl_pindah_'+session.user+'_'];
-  Object.keys(localStorage).forEach(k=>{
-    if(userPrefixes.some(p=>k.startsWith(p)))snap[k]=localStorage.getItem(k);
-  });
   const singularKeys=['bl_kasfisik_'+session.user,'bl_kasreset_'+session.user];
   CHANNELS.forEach(ch=>{singularKeys.push('bl_saldo_'+ch+'_'+session.user,'bl_saldoreset_'+ch+'_'+session.user)});
-  // Data global (member, akun, pengaturan, audit) ikut disinkron per-cabang supaya device
-  // lain yang login cabang yang sama juga melihat versi terbaru.
-  singularKeys.push('bl_members_global','bl_settings','bl_accounts','bl_audit','bl_redemptions','bl_last_backup_ts');
+  singularKeys.push('bl_settings','bl_accounts','bl_last_backup_ts');
   singularKeys.forEach(k=>{if(localStorage.getItem(k)!==null)snap[k]=localStorage.getItem(k)});
   return snap;
 }
-let _lastCloudPushTs=0,_cloudPushTimer=null,_cloudListenerActive=false;
-function pushCloudSync(){
+let _lastStatePushTs=0,_cloudStateTimer=null,_cloudListenerActive=false;
+function pushCloudState(){
   if(!session)return;
   const db=initFirebaseIfPossible();
   if(!db)return;
-  const ts=Date.now();
-  _lastCloudPushTs=ts;
-  try{db.ref(cloudSyncPath()).set({data:collectUserDataForSync(),ts,oleh:session.nama})}catch(e){console.warn('Cloud push gagal:',e)}
+  const ts=Date.now();_lastStatePushTs=ts;
+  try{db.ref(cloudStatePath()).set({data:collectSmallStateForSync(),ts})}catch(e){console.warn('Cloud push state gagal:',e)}
 }
-function scheduleCloudPush(){
+function scheduleCloudState(){
   if(!session)return;
-  clearTimeout(_cloudPushTimer);
-  _cloudPushTimer=setTimeout(pushCloudSync,900);
+  clearTimeout(_cloudStateTimer);
+  _cloudStateTimer=setTimeout(pushCloudState,900);
 }
-function pullCloudSync(callback,user){
-  const db=initFirebaseIfPossible();
-  if(!db){callback&&callback(false);return}
-  db.ref(cloudSyncPath(user)).once('value').then(snap=>{
-    const val=snap.val();
-    if(val&&val.data){
-      Object.keys(val.data).forEach(k=>localStorage.setItem(k,val.data[k]));
-      if(!user)_lastCloudPushTs=val.ts||Date.now();
-    }
-    callback&&callback(true);
-  }).catch(err=>{console.warn('Cloud pull gagal:',err);callback&&callback(false)});
+
+// ══ MERGE — gabungkan catatan yang masuk dari device lain ke data lokal ══
+function mergeTrxRecord(trx){
+  if(!trx||!trx.tgl||!trx.ts)return;
+  const key='bl_trx_'+session.user+'_'+trx.tgl;
+  let arr=JSON.parse(localStorage.getItem(key)||'[]');
+  const idx=arr.findIndex(r=>r.ts===trx.ts);
+  if(idx>=0)arr[idx]=trx;else arr.push(trx);
+  arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
+  localStorage.setItem(key,JSON.stringify(arr));
+  if(trx.tgl===todayISO()){data=arr;render();}
+  renderKas();
 }
+function removeTrxRecordLocal(tgl,ts){
+  if(!tgl||!ts)return;
+  const key='bl_trx_'+session.user+'_'+tgl;
+  let arr=JSON.parse(localStorage.getItem(key)||'[]').filter(r=>r.ts!==ts);
+  localStorage.setItem(key,JSON.stringify(arr));
+  if(tgl===todayISO()){data=arr;render();}
+  renderKas();
+}
+function mergePindahRecord(p){
+  if(!p||!p.tgl||!p.ts)return;
+  const key='bl_pindah_'+session.user+'_'+p.tgl;
+  let arr=JSON.parse(localStorage.getItem(key)||'[]');
+  const idx=arr.findIndex(r=>r.ts===p.ts);
+  if(idx>=0)arr[idx]=p;else arr.push(p);
+  arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
+  localStorage.setItem(key,JSON.stringify(arr));
+  renderKas();
+}
+function mergeMemberRecord(id,m){
+  if(!m)return;
+  let arr=getMembers();
+  const idx=arr.findIndex(x=>x.id===id);
+  if(idx>=0)arr[idx]=m;else arr.push(m);
+  localStorage.setItem('bl_members_global',JSON.stringify(arr));
+  renderMembers();
+}
+function removeMemberRecordLocal(id){
+  const arr=getMembers().filter(x=>x.id!==id);
+  localStorage.setItem('bl_members_global',JSON.stringify(arr));
+  renderMembers();
+}
+function mergeAuditRecord(entry){
+  if(!entry||!entry.ts)return;
+  let logs=JSON.parse(localStorage.getItem('bl_audit')||'[]');
+  if(!logs.find(l=>l.ts===entry.ts)){
+    logs.push(entry);
+    logs.sort((a,b)=>(a.ts||0)-(b.ts||0));
+    if(logs.length>2000)logs=logs.slice(logs.length-2000);
+    localStorage.setItem('bl_audit',JSON.stringify(logs));
+    if(document.getElementById('pageAdmin')&&document.getElementById('pageAdmin').classList.contains('active'))renderAuditLog();
+  }
+}
+function mergeRedeemRecord(entry){
+  if(!entry||!entry.ts)return;
+  let arr=JSON.parse(localStorage.getItem('bl_redemptions')||'[]');
+  if(!arr.find(r=>r.ts===entry.ts)){
+    arr.push(entry);
+    localStorage.setItem('bl_redemptions',JSON.stringify(arr));
+  }
+}
+
 function startCloudSyncListener(){
   const db=initFirebaseIfPossible();
-  if(!db||_cloudListenerActive)return;
+  if(!db||_cloudListenerActive||!session)return;
   _cloudListenerActive=true;
-  db.ref(cloudSyncPath()).on('value',snap=>{
+  const base=cloudBase();
+  db.ref(base+'/trx').on('child_added',snap=>mergeTrxRecord(snap.val()));
+  db.ref(base+'/trx').on('child_changed',snap=>mergeTrxRecord(snap.val()));
+  db.ref(base+'/trx').on('child_removed',snap=>{const v=snap.val();if(v)removeTrxRecordLocal(v.tgl,v.ts)});
+  db.ref(base+'/pindah').on('child_added',snap=>mergePindahRecord(snap.val()));
+  db.ref(base+'/pindah').on('child_changed',snap=>mergePindahRecord(snap.val()));
+  db.ref(base+'/members').on('child_added',snap=>mergeMemberRecord(snap.key,snap.val()));
+  db.ref(base+'/members').on('child_changed',snap=>mergeMemberRecord(snap.key,snap.val()));
+  db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
+  db.ref(base+'/audit').on('child_added',snap=>mergeAuditRecord(snap.val()));
+  db.ref(base+'/redeem').on('child_added',snap=>mergeRedeemRecord(snap.val()));
+  db.ref(cloudStatePath()).on('value',snap=>{
     const val=snap.val();
     if(!val||!val.data)return;
-    if(val.ts===_lastCloudPushTs)return; // ini gema dari kiriman device ini sendiri, abaikan
-    _lastCloudPushTs=val.ts;
+    if(val.ts===_lastStatePushTs)return; // gema dari kiriman device ini sendiri, abaikan
+    _lastStatePushTs=val.ts;
     Object.keys(val.data).forEach(k=>localStorage.setItem(k,val.data[k]));
-    loadData();buildJenisGrid();render();renderMembers();renderKas();
-    if(document.getElementById('pageAdmin').classList.contains('active')){renderAdminAccounts();renderAuditLog()}
-    toast('🔄 Data tersinkron dari device lain','ok');
+    renderKas();
+    if(document.getElementById('pageAdmin')&&document.getElementById('pageAdmin').classList.contains('active')){renderAdminAccounts()}
   });
 }
 // Coba mulai sinkron cloud saat login — pakai retry karena SDK Firebase dimuat "defer"
@@ -1738,7 +1811,33 @@ function tryStartCloudSync(onDone,tries){
   const db=initFirebaseIfPossible(cfg);
   if(!db){onDone();return}
   toast('🔄 Menyinkronkan data dari cloud...','ok');
-  pullCloudSync(()=>{onDone();startCloudSyncListener()});
+  db.ref(cloudBase()).once('value').then(snap=>{
+    const val=snap.val()||{};
+    if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
+    if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
+    if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
+    if(val.audit)Object.values(val.audit).forEach(mergeAuditRecord);
+    if(val.redeem)Object.values(val.redeem).forEach(mergeRedeemRecord);
+    if(val.state&&val.state.data){
+      Object.keys(val.state.data).forEach(k=>localStorage.setItem(k,val.state.data[k]));
+      _lastStatePushTs=val.state.ts||Date.now();
+    }
+    onDone();
+    startCloudSyncListener();
+  }).catch(err=>{console.warn('Cloud initial load gagal:',err);onDone();startCloudSyncListener()});
+}
+// Dipakai saat login gagal secara lokal — mungkin akun ini baru dibuat di device lain,
+// jadi coba tarik daftar akun terbaru dari cloud sebelum menyerah.
+function pullAccountsForLogin(user,callback){
+  const db=initFirebaseIfPossible();
+  if(!db){callback&&callback(false);return}
+  db.ref(cloudStatePath(user)).once('value').then(snap=>{
+    const val=snap.val();
+    if(val&&val.data&&val.data['bl_accounts']){
+      localStorage.setItem('bl_accounts',val.data['bl_accounts']);
+    }
+    callback&&callback(true);
+  }).catch(()=>callback&&callback(false));
 }
 
 // ══ RENDER (dijalankan di jendela Layar Customer) ══════════════
@@ -1910,7 +2009,7 @@ async function getAccounts(){
   if(changed)localStorage.setItem('bl_accounts',JSON.stringify(acc));
   return acc;
 }
-function saveAccounts(a){localStorage.setItem('bl_accounts',JSON.stringify(a));scheduleCloudPush()}
+function saveAccounts(a){localStorage.setItem('bl_accounts',JSON.stringify(a));scheduleCloudState()}
 
 // ══ SESSION ════════════════════════════════════
 let session=null;
@@ -1929,7 +2028,7 @@ async function doLogin(){
   if(a){const h=await hashPass(pass,a.salt);ok=(h===a.hash)}
   if(!ok&&getFirebaseConfig()){
     // Belum ketemu di data lokal — mungkin akun ini baru dibuat di device lain. Coba tarik dari cloud.
-    await new Promise(resolve=>pullCloudSync(resolve,user));
+    await new Promise(resolve=>pullAccountsForLogin(user,resolve));
     acc=await getAccounts();a=acc[user];
     if(a){const h=await hashPass(pass,a.salt);ok=(h===a.hash)}
   }
@@ -2010,7 +2109,7 @@ function showPage(p){
 
 // ══ MEMBER DB ══════════════════════════════════
 function getMembers(){const r=localStorage.getItem('bl_members_global');return r?JSON.parse(r):[]}
-function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a));scheduleCloudPush()}
+function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a))}
 function getMemberById(id){return getMembers().find(m=>m.id===id)||null}
 function getMemberByRfid(rfid){return getMembers().find(m=>m.rfid===rfid)||null}
 function getMemberByHp(hp){return getMembers().find(m=>m.hp===hp)||null}
@@ -2069,23 +2168,24 @@ function loadData(){
   sel.innerHTML='<option value="">Semua jenis</option>';
   jenisList.forEach(j=>{const o=document.createElement('option');o.value=j.label;o.textContent=j.label;sel.appendChild(o)});
 }
-function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data));scheduleCloudPush()}
+function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data))}
 function getCounter(){return parseInt(localStorage.getItem(counterKey())||'0')}
 function setCounter(n){localStorage.setItem(counterKey(),String(n))}
 function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(getCounter()+1).padStart(3,'0')}
 
 // ══ AUDIT LOG ══════════════════════════════════
 function logAudit(aksi,detail){
+  const entry={waktu:new Date().toLocaleString('id-ID'),ts:Date.now(),aksi,oleh:session?session.nama:'-',cabang:session?session.label:'-',detail};
   const logs=JSON.parse(localStorage.getItem('bl_audit')||'[]');
-  logs.push({waktu:new Date().toLocaleString('id-ID'),ts:Date.now(),aksi,oleh:session?session.nama:'-',cabang:session?session.label:'-',detail});
+  logs.push(entry);
   if(logs.length>2000)logs.shift();
   localStorage.setItem('bl_audit',JSON.stringify(logs));
-  scheduleCloudPush();
+  if(session)pushCloudRecord('audit',entry.ts,entry);
 }
 
 // ══ SETTINGS (global, cross-branch) ════════════
 function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;return s}
-function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s));scheduleCloudPush()}
+function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s));scheduleCloudState()}
 
 // ══ KAS FISIK & SALDO CHANNEL (BRI / Bank Transfer) ════════
 // Model agen BRILink — kas fisik (uang tunai) dan saldo rekening/channel
@@ -2118,10 +2218,10 @@ const SALDO_EFFECT={
 // oleh akun cabang manapun untuk saldo cabangnya sendiri, tidak harus Admin).
 function kasFisikKey(){return'bl_kasfisik_'+session.user}
 function getKasFisikAwal(){const r=localStorage.getItem(kasFisikKey());return r?(JSON.parse(r).awal||0):0}
-function setKasFisikAwal(n){localStorage.setItem(kasFisikKey(),JSON.stringify({awal:n}));scheduleCloudPush()}
+function setKasFisikAwal(n){localStorage.setItem(kasFisikKey(),JSON.stringify({awal:n}));scheduleCloudState()}
 function saldoChannelKey(ch){return'bl_saldo_'+ch+'_'+session.user}
 function getSaldoAwal(ch){const r=localStorage.getItem(saldoChannelKey(ch));return r?(JSON.parse(r).awal||0):0}
-function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.stringify({awal:n}));scheduleCloudPush()}
+function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.stringify({awal:n}));scheduleCloudState()}
 
 // ══ RESET-MARKER MECHANISM (dipakai oleh "Atur Saldo") ═══════
 // Tidak menghapus riwayat transaksi (tetap utuh untuk Laporan), hanya menandai titik waktu
@@ -2129,10 +2229,10 @@ function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.string
 // lintas hari sampai Admin mengubahnya lagi.
 function kasResetKey(){return'bl_kasreset_'+session.user}
 function getKasResetAt(){return parseInt(localStorage.getItem(kasResetKey())||'0')}
-function setKasResetAt(ts){localStorage.setItem(kasResetKey(),String(ts));scheduleCloudPush()}
+function setKasResetAt(ts){localStorage.setItem(kasResetKey(),String(ts));scheduleCloudState()}
 function saldoResetKey(ch){return'bl_saldoreset_'+ch+'_'+session.user}
 function getSaldoResetAt(ch){return parseInt(localStorage.getItem(saldoResetKey(ch))||'0')}
-function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts));scheduleCloudPush()}
+function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts));scheduleCloudState()}
 function isAdmin(){return!!(session&&session.role==='admin')}
 
 // Scan seluruh riwayat transaksi/pemindahan milik user ini lintas hari (untuk hitung saldo berjalan)
@@ -2156,7 +2256,7 @@ function scanAllPindahForUser(){
 // ══ PEMINDAHAN SALDO (manual: Kas ⇄ Saldo BRI ⇄ Saldo Bank Transfer) ═
 function pindahKey(){return'bl_pindah_'+session.user+'_'+todayISO()}
 function getPindahList(){const r=localStorage.getItem(pindahKey());return r?JSON.parse(r):[]}
-function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a));scheduleCloudPush()}
+function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a))}
 function labelSisi(k){return k==='KAS'?'Kas Tunai':(CHANNEL_META[k]?CHANNEL_META[k].full:k)}
 function prosesPindah(){
   const dari=document.getElementById('pindahDari').value;
@@ -2167,8 +2267,10 @@ function prosesPindah(){
   if(dari===ke){toast('Sisi "Dari" dan "Ke" tidak boleh sama','err');return}
   if(!nominal||nominal<=0){toast('Masukkan nominal yang valid','err');return}
   const list=getPindahList();
-  list.push({id:'PD-'+Date.now(),waktu:nowTime(),ts:Date.now(),dari,ke,nominal,admin:adminFee,ket,oleh:session.nama});
+  const record={id:'PD-'+Date.now(),tgl:todayISO(),waktu:nowTime(),ts:Date.now(),dari,ke,nominal,admin:adminFee,ket,oleh:session.nama};
+  list.push(record);
   savePindahList(list);
+  pushCloudRecord('pindah',record.ts,record);
   logAudit('PEMINDAHAN_SALDO',labelSisi(dari)+' → '+labelSisi(ke)+' sebesar '+fmtRp(nominal)+(adminFee?' (biaya admin '+fmtRp(adminFee)+')':'')+(ket?' · '+ket:''));
   closeModal('modalPindah');renderKas();
   toast('✓ Pemindahan saldo berhasil dicatat','ok');
@@ -2588,9 +2690,11 @@ function commitTransaksi(payload){
         members[mi].poin=Math.max(0,(members[mi].poin||0)-oldPoin+newPoin);
         members[mi].totalNominal=Math.max(0,(members[mi].totalNominal||0)-old.nominal+nominal);
         saveMembers(members);
+        pushCloudRecord('members',members[mi].id,members[mi]);
       }
     }
     saveData();
+    pushCloudRecord('trx',data[idx].ts,data[idx]);
     logAudit('EDIT_TRANSAKSI',old.no+' · '+jenis+' · '+fmtRp(nominal));
     toast('✓ '+old.no+' berhasil diperbarui','ok');
     resetForm();render();renderKas();
@@ -2612,13 +2716,14 @@ function commitTransaksi(payload){
   };
   data.push(trx);
   saveData();
+  pushCloudRecord('trx',trx.ts,trx);
 
   let successMemberNama=null,successPoinBaru=0,successTotalPoin=0;
   if(currentRfid&&poin>0){
     const members=getMembers();
     const idx=members.findIndex(m=>m.id===currentRfid.id);
     successMemberNama=currentRfid.nama;successPoinBaru=poin;successTotalPoin=(currentRfid.poin||0)+poin;
-    if(idx>=0){members[idx].poin=(members[idx].poin||0)+poin;members[idx].totalTrx=(members[idx].totalTrx||0)+1;members[idx].totalNominal=(members[idx].totalNominal||0)+nominal;members[idx].lastTrx=todayISO();saveMembers(members);successTotalPoin=members[idx].poin;}
+    if(idx>=0){members[idx].poin=(members[idx].poin||0)+poin;members[idx].totalTrx=(members[idx].totalTrx||0)+1;members[idx].totalNominal=(members[idx].totalNominal||0)+nominal;members[idx].lastTrx=todayISO();saveMembers(members);successTotalPoin=members[idx].poin;pushCloudRecord('members',members[idx].id,members[idx]);}
     toast('✓ '+noTrx+' · Member +'+poin+' poin','ok');
   } else {
     toast('✓ '+noTrx+' berhasil disimpan','ok');
@@ -2717,10 +2822,11 @@ function hapus(idx){
       members[mi].totalTrx=Math.max(0,(members[mi].totalTrx||0)-1);
       members[mi].totalNominal=Math.max(0,(members[mi].totalNominal||0)-r.nominal);
       saveMembers(members);
+      pushCloudRecord('members',members[mi].id,members[mi]);
     }
   }
   logAudit('HAPUS_TRANSAKSI',r.no+' · '+r.jenis+' · '+fmtRp(r.nominal)+' · Alasan: '+reason.trim());
-  data.splice(idx,1);saveData();render();renderKas();toast('Transaksi dihapus')
+  data.splice(idx,1);saveData();removeCloudRecord('trx',r.ts);render();renderKas();toast('Transaksi dihapus')
 }
 
 function renderStats(filtered){
@@ -2768,23 +2874,28 @@ function saveMember(){
   const editId=document.getElementById('editMemberId').value;
   if(members.find(m=>m.rfid===rfid&&m.id!==editId)){toast('ID Kartu sudah digunakan member lain','err');return}
   if(members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
+  let savedId=editId;
   if(editId){
     const idx=members.findIndex(m=>m.id===editId);
     if(idx>=0)members[idx]={...members[idx],nama,hp,rfid,poin,tglLahir:document.getElementById('mTglLahir').value,alamat:document.getElementById('mAlamat').value.trim()};
     toast('✓ Data member diperbarui','ok');
   } else {
-    members.push({id:'M-'+Date.now(),nama,hp,rfid,poin,totalTrx:0,totalNominal:0,lastTrx:'',tglLahir:document.getElementById('mTglLahir').value,alamat:document.getElementById('mAlamat').value.trim(),tglDaftar:todayISO()});
+    const newMember={id:'M-'+Date.now(),nama,hp,rfid,poin,totalTrx:0,totalNominal:0,lastTrx:'',tglLahir:document.getElementById('mTglLahir').value,alamat:document.getElementById('mAlamat').value.trim(),tglDaftar:todayISO()};
+    members.push(newMember);
+    savedId=newMember.id;
     toast('✓ Member baru berhasil didaftarkan','ok');
   }
   saveMembers(members);closeModal('modalMember');renderMembers();
+  const saved=members.find(m=>m.id===savedId);
+  if(saved)pushCloudRecord('members',saved.id,saved);
 }
 function deleteMember(id){
   const m=getMemberById(id);if(!m)return;
   if(!confirm('Hapus member '+m.nama+'?'))return;
-  saveMembers(getMembers().filter(x=>x.id!==id));renderMembers();toast('Member dihapus');
+  saveMembers(getMembers().filter(x=>x.id!==id));removeCloudRecord('members',id);renderMembers();toast('Member dihapus');
 }
 function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
-function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a));scheduleCloudPush()}
+function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
 
 function openMemberHistory(id){
   const m=getMemberById(id);if(!m)return;
@@ -2846,9 +2957,12 @@ function prosesRedeem(){
   if(!ket){toast('Isi keterangan penukaran poin','err');return}
   members[mi].poin-=jumlah;
   saveMembers(members);
+  pushCloudRecord('members',members[mi].id,members[mi]);
   const reds=getRedemptions();
-  reds.push({id:'RD-'+Date.now(),memberId:id,memberNama:members[mi].nama,jumlah,ket,tgl:todayISO(),tglDisplay:todayDisplay(),jam:nowTime(),oleh:session.nama,cabang:session.label});
+  const record={id:'RD-'+Date.now(),ts:Date.now(),memberId:id,memberNama:members[mi].nama,jumlah,ket,tgl:todayISO(),tglDisplay:todayDisplay(),jam:nowTime(),oleh:session.nama,cabang:session.label};
+  reds.push(record);
   saveRedemptions(reds);
+  pushCloudRecord('redeem',record.ts,record);
   logAudit('REDEEM_POIN',members[mi].nama+' menukar '+jumlah+' poin: '+ket);
   closeModal('modalRedeem');renderMembers();toast('✓ Poin berhasil ditukar','ok');
 }
