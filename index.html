@@ -1104,6 +1104,20 @@ tr:hover td{background:#FAFBFF}
                   <div style="background:var(--rose-lt);border:1px solid #f3caca;border-radius:8px;padding:10px 12px;color:var(--rose-700);font-size:11.5px;font-weight:600;line-height:1.6">⚠️ Penting: link ini hanya akan terbuka di tablet/HP kalau file aplikasi ini sudah di-hosting online (bukan cuma tersimpan sebagai file di komputer kasir). Cara paling gampang tanpa perlu jadi programmer: buka <b>netlify.com/drop</b> di komputer ini, drag file HTML aplikasi ke situ, nanti dapat link publik dalam beberapa detik — pakai link publik itu (bukan file lokal) supaya QR/link di atas bisa dibuka dari tablet manapun.</div>
                 </div>
               </div>
+
+              <div style="margin-top:20px;padding-top:16px;border-top:1px dashed var(--ink-200)">
+                <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:6px">🔗 Aktifkan Sinkron Data di Komputer/Tablet Lain</div>
+                <div style="font-size:11.5px;color:var(--ink-500);margin-bottom:10px;line-height:1.7">Config Firebase tersimpan sendiri-sendiri di tiap device — device lain <b>belum otomatis tahu</b> config ini, meski akunnya sama-sama cabang1 dsb. Buka/scan link di bawah <b>SEKALI SAJA</b> di device lain itu (boleh pakai akun kasir biasa, tidak perlu admin) — setelah itu sinkron otomatis aktif di situ selamanya, tidak perlu diulang.</div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+                  <img id="fbSetupQr" src="" alt="QR Setup Device" style="width:130px;height:130px;border-radius:12px;border:1px solid var(--ink-200)">
+                  <div style="flex:1;min-width:220px">
+                    <div style="display:flex;gap:6px">
+                      <div id="fbSetupUrl" style="flex:1;background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:9px 11px;font-size:10.5px;font-family:var(--mono);color:var(--ink-600);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+                      <button class="btn-clr" onclick="copySetupUrl()" style="flex-shrink:0">📋 Salin</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1527,6 +1541,33 @@ try{cdChannel=new BroadcastChannel(CD_CHANNEL_NAME)}catch(e){cdChannel=null}
 
 function isCustomerDisplayMode(){
   return new URLSearchParams(window.location.search).get('tampilan')==='customer';
+}
+// ══ SETUP OTOMATIS DI DEVICE BARU ═══════════════════════════════
+// Config Firebase tersimpan per-device (localStorage) — device baru belum otomatis
+// tahu config-nya, dan akun cabang biasa (bukan admin) tidak bisa buka Panel Admin untuk
+// menempelnya sendiri. Solusinya: Admin generate SATU link (berisi config yang sudah
+// dikodekan), buka/scan link itu SEKALI di device baru, config otomatis tersimpan di situ,
+// setelah itu device tsb bisa dipakai normal (login apa saja) dengan sinkron otomatis aktif.
+function importFirebaseConfigFromUrlIfPresent(){
+  const fbParam=new URLSearchParams(window.location.search).get('fb');
+  if(!fbParam||isCustomerDisplayMode())return; // mode Layar Customer sudah tangani sendiri
+  const cfg=decodeFirebaseConfigFromUrl(fbParam);
+  if(!cfg||!cfg.databaseURL)return;
+  setFirebaseConfig(cfg);
+  fbApp=null;fbDb=null;
+  // Bersihkan parameter dari address bar supaya tidak "menempel" terus & tidak sengaja dibagikan ulang
+  try{
+    const url=new URL(window.location.href);
+    url.searchParams.delete('fb');
+    window.history.replaceState({},'',url.toString());
+  }catch(e){}
+  setTimeout(()=>toast('✓ Sinkronisasi otomatis diaktifkan di device ini','ok'),1200);
+}
+function deviceSetupUrl(){
+  const cfg=getFirebaseConfig();
+  if(!cfg)return'';
+  const base=window.location.href.split('?')[0].split('#')[0];
+  return base+'?fb='+encodeFirebaseConfigForUrl(cfg);
 }
 function customerDisplayUrl(){
   return window.location.href.split('?')[0].split('#')[0]+'?tampilan=customer';
@@ -3066,9 +3107,17 @@ function renderFirebaseSyncUI(){
     const url=remoteCustomerDisplayUrl();
     document.getElementById('fbRemoteUrl').textContent=url;
     document.getElementById('fbQrImg').src=url?('https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url)):'';
+    const setupUrl=deviceSetupUrl();
+    document.getElementById('fbSetupUrl').textContent=setupUrl;
+    document.getElementById('fbSetupQr').src=setupUrl?('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(setupUrl)):'';
   } else {
     section.style.display='none';
   }
+}
+function copySetupUrl(){
+  const url=document.getElementById('fbSetupUrl').textContent;
+  if(!url)return;
+  navigator.clipboard.writeText(url).then(()=>toast('✓ Link setup disalin','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
 }
 function saveFirebaseConfigUI(){
   const raw=document.getElementById('fbConfigInput').value.trim();
@@ -3242,6 +3291,8 @@ function toast(msg,type=''){
 // ══ CUSTOMER DISPLAY — jalankan di sini (paling akhir) supaya fmtRp/getTier sudah tersedia ══
 if(isCustomerDisplayMode()){
   initCustomerDisplayWindow();
+} else {
+  importFirebaseConfigFromUrlIfPresent();
 }
 </script>
 </body>
