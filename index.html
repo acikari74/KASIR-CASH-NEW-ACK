@@ -529,6 +529,7 @@ tr:hover td{background:#FAFBFF}
     radial-gradient(900px 600px at 105% 105%, rgba(189,149,48,.22), transparent 55%),
     linear-gradient(160deg, var(--navy-950) 0%, var(--navy-900) 45%, var(--navy-850) 100%);
   flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:var(--sans);overflow-y:auto}
+#cdScaleWrap{display:flex;flex-direction:column;align-items:center;transform-origin:center center;transition:transform .25s ease}
 .cd-brand{display:none}
 .cd-brand-icon{width:42px;height:42px;background:var(--foil);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--navy-950)}
 .cd-brand-txt{color:#fff;font-size:15px;font-weight:700;display:flex;flex-direction:column}
@@ -1195,6 +1196,7 @@ tr:hover td{background:#FAFBFF}
   </div>
   <div class="cd-mode-badge" id="cdModeBadge" style="display:none"></div>
 
+  <div id="cdScaleWrap">
   <!-- IDLE STATE -->
   <div class="cd-state" id="cdIdle">
     <div class="cd-idle-icon">💳</div>
@@ -1302,6 +1304,7 @@ tr:hover td{background:#FAFBFF}
     <div class="cd-success-title">Terima kasih, <span id="cdSuccessName">Kak</span>!</div>
     <div class="cd-success-poin">+<span id="cdSuccessPoinBaru">1</span> Poin</div>
     <div class="cd-success-total">Total poin Anda sekarang: <b id="cdSuccessTotal">0</b></div>
+  </div>
   </div>
 </div>
 
@@ -1844,7 +1847,31 @@ function pullAccountsForLogin(user,callback){
 const CD_TIER_NEXT={Regular:20,Silver:60,Gold:150,Platinum:300,Diamond:300};
 function cdShow(id){
   ['cdIdle','cdMember','cdSuccess'].forEach(x=>document.getElementById(x).style.display=(x===id?'flex':'none'));
+  applyCdScale();
 }
+
+// ══ SKALA OTOMATIS — supaya tampilan mengisi layar berapapun ukuran monitornya ══
+// Semua elemen didesain dengan ukuran tetap (px) untuk satu ukuran "acuan", lalu
+// seluruh blok ini di-scale (diperbesar/diperkecil) mengikuti ukuran layar sungguhan.
+// Jadi di monitor 22 inci / TV besar, tampilannya otomatis membesar mengisi layar,
+// bukan cuma diam kecil di tengah-tengah layar yang jauh lebih luas.
+let _cdScaleTimer=null;
+function applyCdScale(){
+  requestAnimationFrame(()=>{
+    const wrap=document.getElementById('cdScaleWrap');
+    if(!wrap)return;
+    wrap.style.transform='scale(1)';
+    const rect=wrap.getBoundingClientRect();
+    if(rect.width<10||rect.height<10)return; // belum ter-render, coba lagi nanti
+    const availW=window.innerWidth*0.94;
+    const availH=window.innerHeight*0.88;
+    let scale=Math.min(availW/rect.width,availH/rect.height);
+    if(!isFinite(scale)||scale<=0)scale=1;
+    scale=Math.min(scale,2.2); // batas atas supaya foto produk tidak pecah/blur kalau di-zoom terlalu jauh
+    wrap.style.transform='scale('+scale.toFixed(4)+')';
+  });
+}
+window.addEventListener('resize',()=>{clearTimeout(_cdScaleTimer);_cdScaleTimer=setTimeout(applyCdScale,150)});
 
 // ══ CAROUSEL — slideshow bergantian di layar sambutan (idle) ══
 const CD_SLIDE_IDS=['cdSlideTier','cdSlidePromo'];
@@ -1912,6 +1939,8 @@ function initCustomerDisplayWindow(){
   document.getElementById('customerDisplay').style.display='flex';
   document.getElementById('cdTierPromo').innerHTML=buildCdTierPromoHtml();
   startCdCarousel();
+  applyCdScale();
+  setTimeout(applyCdScale,400); // ulang sekali lagi setelah font/layout benar-benar settle
 
   const params=new URLSearchParams(window.location.search);
   const fbParam=params.get('fb');
