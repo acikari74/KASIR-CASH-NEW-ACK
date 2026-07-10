@@ -1054,8 +1054,8 @@ tr:hover td{background:#FAFBFF}
           </div>
 
           <div class="filter-card" style="margin-bottom:20px">
-            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">📱 Layar Customer di Tablet/HP Terpisah (opsional)</div>
-            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, "Layar Customer" cuma bisa dibuka di jendela kedua <b>komputer yang sama</b> dengan kasir. Kalau mau pakai <b>tablet/HP terpisah</b> sebagai layar sungguhan yang menghadap ke customer, aktifkan sinkronisasi jarak jauh di bawah ini (gratis, pakai Firebase, butuh internet).</div>
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer (opsional)</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, data (transaksi, member, kas/saldo, dll) tersimpan <b>di masing-masing komputer sendiri-sendiri</b> — tidak nyambung satu sama lain. Aktifkan Firebase di bawah ini untuk 2 manfaat sekaligus (gratis, butuh internet):<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah, bukan cuma jendela kedua di komputer yang sama.</div>
 
             <details style="margin-bottom:14px">
               <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 Cara bikin akun Firebase gratis (sekali saja, ± 5 menit, semua klik-klik saja)</summary>
@@ -1067,6 +1067,19 @@ tr:hover td{background:#FAFBFF}
                 <li>Akan muncul kode berisi objek <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">firebaseConfig = {...}</span> — <b>copy semua isi kurung kurawal {...} itu</b> (termasuk kurung kurawalnya).</li>
                 <li>Tempel di kotak di bawah ini, lalu klik "Simpan Konfigurasi".</li>
               </ol>
+            </details>
+
+            <details style="margin-bottom:14px">
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--rose-600)">⚠️ Sudah pernah setup Firebase sebelumnya? Wajib update Rules-nya dulu</summary>
+              <p style="margin:12px 0 8px;font-size:12px;color:var(--ink-600);line-height:1.8">Fitur sinkronisasi data ini pakai "alamat" baru di database (<span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">brilink_sync</span>) selain yang lama (<span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">brilink_customer</span>). Buka Firebase Console → Realtime Database → tab <b>Rules</b> → ganti isinya jadi:</p>
+              <pre style="background:var(--paper-50);border:1px solid var(--ink-200);border-radius:8px;padding:12px;font-size:11px;font-family:var(--mono);overflow-x:auto;white-space:pre">{
+  "rules": {
+    "brilink_customer": { ".read": true, ".write": true },
+    "brilink_sync": { ".read": true, ".write": true },
+    "$other": { ".read": false, ".write": false }
+  }
+}</pre>
+              <p style="margin:8px 0 0;font-size:11px;color:var(--ink-400)">Klik "Publish" setelah diganti. Kalau baru pertama kali setup Firebase, langsung pakai rules ini dari awal (tidak perlu langkah tambahan).</p>
             </details>
 
             <div class="fg">
@@ -1611,6 +1624,82 @@ function remoteCustomerDisplayUrl(){
   return base+'?tampilan=customer&cabang='+encodeURIComponent(cabang)+'&fb='+encodeFirebaseConfigForUrl(cfg);
 }
 
+// ══ SINKRONISASI DATA UTAMA ANTAR DEVICE (Firebase) ══════════════
+// Fitur opsional: kalau Firebase sudah diatur di Panel Admin, akun cabang yang sama
+// (misal cabang1) bisa login di komputer/tablet manapun dan data transaksi, member,
+// kas/saldo, dll otomatis tersinkron — tidak lagi terkunci di 1 komputer saja.
+// Cara kerja: setiap kali ada perubahan data, seluruh data milik cabang itu dikirim
+// sebagai satu paket ke Firebase (mirip cara kerja Backup, tapi otomatis & real-time).
+// Device lain yang login dengan akun sama akan otomatis menerima update itu.
+function cloudSyncPath(user){return'brilink_sync/'+(user||session.user)}
+function collectUserDataForSync(){
+  const snap={};
+  const userPrefixes=['bl_trx_'+session.user+'_','bl_pindah_'+session.user+'_'];
+  Object.keys(localStorage).forEach(k=>{
+    if(userPrefixes.some(p=>k.startsWith(p)))snap[k]=localStorage.getItem(k);
+  });
+  const singularKeys=['bl_kasfisik_'+session.user,'bl_kasreset_'+session.user];
+  CHANNELS.forEach(ch=>{singularKeys.push('bl_saldo_'+ch+'_'+session.user,'bl_saldoreset_'+ch+'_'+session.user)});
+  // Data global (member, akun, pengaturan, audit) ikut disinkron per-cabang supaya device
+  // lain yang login cabang yang sama juga melihat versi terbaru.
+  singularKeys.push('bl_members_global','bl_settings','bl_accounts','bl_audit','bl_redemptions','bl_last_backup_ts');
+  singularKeys.forEach(k=>{if(localStorage.getItem(k)!==null)snap[k]=localStorage.getItem(k)});
+  return snap;
+}
+let _lastCloudPushTs=0,_cloudPushTimer=null,_cloudListenerActive=false;
+function pushCloudSync(){
+  if(!session)return;
+  const db=initFirebaseIfPossible();
+  if(!db)return;
+  const ts=Date.now();
+  _lastCloudPushTs=ts;
+  try{db.ref(cloudSyncPath()).set({data:collectUserDataForSync(),ts,oleh:session.nama})}catch(e){console.warn('Cloud push gagal:',e)}
+}
+function scheduleCloudPush(){
+  if(!session)return;
+  clearTimeout(_cloudPushTimer);
+  _cloudPushTimer=setTimeout(pushCloudSync,900);
+}
+function pullCloudSync(callback,user){
+  const db=initFirebaseIfPossible();
+  if(!db){callback&&callback(false);return}
+  db.ref(cloudSyncPath(user)).once('value').then(snap=>{
+    const val=snap.val();
+    if(val&&val.data){
+      Object.keys(val.data).forEach(k=>localStorage.setItem(k,val.data[k]));
+      if(!user)_lastCloudPushTs=val.ts||Date.now();
+    }
+    callback&&callback(true);
+  }).catch(err=>{console.warn('Cloud pull gagal:',err);callback&&callback(false)});
+}
+function startCloudSyncListener(){
+  const db=initFirebaseIfPossible();
+  if(!db||_cloudListenerActive)return;
+  _cloudListenerActive=true;
+  db.ref(cloudSyncPath()).on('value',snap=>{
+    const val=snap.val();
+    if(!val||!val.data)return;
+    if(val.ts===_lastCloudPushTs)return; // ini gema dari kiriman device ini sendiri, abaikan
+    _lastCloudPushTs=val.ts;
+    Object.keys(val.data).forEach(k=>localStorage.setItem(k,val.data[k]));
+    loadData();buildJenisGrid();render();renderMembers();renderKas();
+    if(document.getElementById('pageAdmin').classList.contains('active')){renderAdminAccounts();renderAuditLog()}
+    toast('🔄 Data tersinkron dari device lain','ok');
+  });
+}
+// Coba mulai sinkron cloud saat login — pakai retry karena SDK Firebase dimuat "defer"
+// (lihat catatan di modul Layar Customer) sehingga belum tentu siap persis saat ini dipanggil.
+function tryStartCloudSync(onDone,tries){
+  tries=tries||0;
+  const cfg=getFirebaseConfig();
+  if(!cfg){onDone();return}
+  if(typeof firebase==='undefined'&&tries<50){setTimeout(()=>tryStartCloudSync(onDone,tries+1),200);return}
+  const db=initFirebaseIfPossible(cfg);
+  if(!db){onDone();return}
+  toast('🔄 Menyinkronkan data dari cloud...','ok');
+  pullCloudSync(()=>{onDone();startCloudSyncListener()});
+}
+
 // ══ RENDER (dijalankan di jendela Layar Customer) ══════════════
 const CD_TIER_NEXT={Regular:20,Silver:60,Gold:150,Platinum:300,Diamond:300};
 function cdShow(id){
@@ -1780,7 +1869,7 @@ async function getAccounts(){
   if(changed)localStorage.setItem('bl_accounts',JSON.stringify(acc));
   return acc;
 }
-function saveAccounts(a){localStorage.setItem('bl_accounts',JSON.stringify(a))}
+function saveAccounts(a){localStorage.setItem('bl_accounts',JSON.stringify(a));scheduleCloudPush()}
 
 // ══ SESSION ════════════════════════════════════
 let session=null;
@@ -1793,10 +1882,16 @@ async function doLogin(){
   if(!nama){err.textContent='Masukkan nama petugas.';err.style.display='block';return}
   if(!user||!pass){err.textContent='Masukkan username dan password.';err.style.display='block';return}
   if(btn){btn.disabled=true;btn.style.opacity='.7';btn.innerHTML='<span>Memeriksa...</span>'}
-  const acc=await getAccounts();
-  const a=acc[user];
+  let acc=await getAccounts();
+  let a=acc[user];
   let ok=false;
   if(a){const h=await hashPass(pass,a.salt);ok=(h===a.hash)}
+  if(!ok&&getFirebaseConfig()){
+    // Belum ketemu di data lokal — mungkin akun ini baru dibuat di device lain. Coba tarik dari cloud.
+    await new Promise(resolve=>pullCloudSync(resolve,user));
+    acc=await getAccounts();a=acc[user];
+    if(a){const h=await hashPass(pass,a.salt);ok=(h===a.hash)}
+  }
   if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='<span>Masuk ke Sistem →</span>'}
   if(!ok){
     err.textContent='Username atau password salah.';err.style.display='block';
@@ -1828,6 +1923,9 @@ function startApp(){
   document.getElementById('topUserSub').textContent=session.label+(session.role==='admin'?' · Admin':'');
   document.getElementById('topAvatar').textContent=session.nama.charAt(0).toUpperCase();
   document.getElementById('navAdmin').style.display=session.role==='admin'?'flex':'none';
+  tryStartCloudSync(finishStartApp);
+}
+function finishStartApp(){
   loadData();buildJenisGrid();updateNoTrx();render();renderMembers();renderKas();tick();
   document.getElementById('tierPromoContainer').innerHTML=buildTierPromoHtml();
   cdIdleState();
@@ -1871,7 +1969,7 @@ function showPage(p){
 
 // ══ MEMBER DB ══════════════════════════════════
 function getMembers(){const r=localStorage.getItem('bl_members_global');return r?JSON.parse(r):[]}
-function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a))}
+function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a));scheduleCloudPush()}
 function getMemberById(id){return getMembers().find(m=>m.id===id)||null}
 function getMemberByRfid(rfid){return getMembers().find(m=>m.rfid===rfid)||null}
 function getMemberByHp(hp){return getMembers().find(m=>m.hp===hp)||null}
@@ -1930,7 +2028,7 @@ function loadData(){
   sel.innerHTML='<option value="">Semua jenis</option>';
   jenisList.forEach(j=>{const o=document.createElement('option');o.value=j.label;o.textContent=j.label;sel.appendChild(o)});
 }
-function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data))}
+function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data));scheduleCloudPush()}
 function getCounter(){return parseInt(localStorage.getItem(counterKey())||'0')}
 function setCounter(n){localStorage.setItem(counterKey(),String(n))}
 function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(getCounter()+1).padStart(3,'0')}
@@ -1941,11 +2039,12 @@ function logAudit(aksi,detail){
   logs.push({waktu:new Date().toLocaleString('id-ID'),ts:Date.now(),aksi,oleh:session?session.nama:'-',cabang:session?session.label:'-',detail});
   if(logs.length>2000)logs.shift();
   localStorage.setItem('bl_audit',JSON.stringify(logs));
+  scheduleCloudPush();
 }
 
 // ══ SETTINGS (global, cross-branch) ════════════
 function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;return s}
-function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s))}
+function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s));scheduleCloudPush()}
 
 // ══ KAS FISIK & SALDO CHANNEL (BRI / Bank Transfer) ════════
 // Model agen BRILink — kas fisik (uang tunai) dan saldo rekening/channel
@@ -1978,10 +2077,10 @@ const SALDO_EFFECT={
 // oleh akun cabang manapun untuk saldo cabangnya sendiri, tidak harus Admin).
 function kasFisikKey(){return'bl_kasfisik_'+session.user}
 function getKasFisikAwal(){const r=localStorage.getItem(kasFisikKey());return r?(JSON.parse(r).awal||0):0}
-function setKasFisikAwal(n){localStorage.setItem(kasFisikKey(),JSON.stringify({awal:n}))}
+function setKasFisikAwal(n){localStorage.setItem(kasFisikKey(),JSON.stringify({awal:n}));scheduleCloudPush()}
 function saldoChannelKey(ch){return'bl_saldo_'+ch+'_'+session.user}
 function getSaldoAwal(ch){const r=localStorage.getItem(saldoChannelKey(ch));return r?(JSON.parse(r).awal||0):0}
-function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.stringify({awal:n}))}
+function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.stringify({awal:n}));scheduleCloudPush()}
 
 // ══ RESET-MARKER MECHANISM (dipakai oleh "Atur Saldo") ═══════
 // Tidak menghapus riwayat transaksi (tetap utuh untuk Laporan), hanya menandai titik waktu
@@ -1989,10 +2088,10 @@ function setSaldoAwal(ch,n){localStorage.setItem(saldoChannelKey(ch),JSON.string
 // lintas hari sampai Admin mengubahnya lagi.
 function kasResetKey(){return'bl_kasreset_'+session.user}
 function getKasResetAt(){return parseInt(localStorage.getItem(kasResetKey())||'0')}
-function setKasResetAt(ts){localStorage.setItem(kasResetKey(),String(ts))}
+function setKasResetAt(ts){localStorage.setItem(kasResetKey(),String(ts));scheduleCloudPush()}
 function saldoResetKey(ch){return'bl_saldoreset_'+ch+'_'+session.user}
 function getSaldoResetAt(ch){return parseInt(localStorage.getItem(saldoResetKey(ch))||'0')}
-function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts))}
+function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts));scheduleCloudPush()}
 function isAdmin(){return!!(session&&session.role==='admin')}
 
 // Scan seluruh riwayat transaksi/pemindahan milik user ini lintas hari (untuk hitung saldo berjalan)
@@ -2016,7 +2115,7 @@ function scanAllPindahForUser(){
 // ══ PEMINDAHAN SALDO (manual: Kas ⇄ Saldo BRI ⇄ Saldo Bank Transfer) ═
 function pindahKey(){return'bl_pindah_'+session.user+'_'+todayISO()}
 function getPindahList(){const r=localStorage.getItem(pindahKey());return r?JSON.parse(r):[]}
-function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a))}
+function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a));scheduleCloudPush()}
 function labelSisi(k){return k==='KAS'?'Kas Tunai':(CHANNEL_META[k]?CHANNEL_META[k].full:k)}
 function prosesPindah(){
   const dari=document.getElementById('pindahDari').value;
@@ -2644,7 +2743,7 @@ function deleteMember(id){
   saveMembers(getMembers().filter(x=>x.id!==id));renderMembers();toast('Member dihapus');
 }
 function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
-function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
+function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a));scheduleCloudPush()}
 
 function openMemberHistory(id){
   const m=getMemberById(id);if(!m)return;
