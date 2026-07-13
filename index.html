@@ -1597,9 +1597,14 @@ function handleOpenCustomerDisplayClick(e){
 // belum selesai termuat). Solusi: ulangi penempatan beberapa kali dalam 2 detik pertama —
 // yang sudah pas tidak terlihat pindah, yang tadinya gagal jadi ketarik ke posisi benar.
 function applyWindowPosition(win,pos){
-  const attempt=()=>{try{win.moveTo(pos.left,pos.top);win.resizeTo(pos.width,pos.height)}catch(e){}};
+  const attempt=()=>{try{
+    win.moveTo(pos.left,pos.top);win.resizeTo(pos.width,pos.height);
+    // win.focus() memicu browser menggambar ulang isi jendela di monitor tujuan —
+    // ini obat paling ampuh & TANPA beban untuk bug "blank di monitor kedua" di Chrome.
+    win.focus();
+  }catch(e){}};
   attempt();
-  [200,500,1000,1800].forEach(ms=>setTimeout(attempt,ms));
+  [150,400,800,1400,2200].forEach(ms=>setTimeout(attempt,ms));
 }
 async function positionOnSecondScreen(win){
   try{
@@ -1964,17 +1969,21 @@ function cdShow(id){
 // seluruh blok ini di-scale (diperbesar/diperkecil) mengikuti ukuran layar sungguhan.
 // Jadi di monitor 22 inci / TV besar, tampilannya otomatis membesar mengisi layar,
 // bukan cuma diam kecil di tengah-tengah layar yang jauh lebih luas.
-let _cdScaleTimer=null;
+let _cdScaleTimer=null,_cdScaleRetries=0;
 function applyCdScale(){
   requestAnimationFrame(()=>{
     const wrap=document.getElementById('cdScaleWrap');
     if(!wrap)return;
     // Pakai offsetWidth/offsetHeight (ukuran asli tata-letak), BUKAN getBoundingClientRect(),
-    // karena getBoundingClientRect() ikut kebawa transform/transisi yang sedang berjalan —
-    // itu penyebab bug kemarin: hasil ukur jadi salah persis waktu transisi balik dari layar
-    // "Terima kasih" ke layar sambutan, bikin skalanya keliru dan tampilan jadi kecil.
+    // karena getBoundingClientRect() ikut kebawa transform/transisi yang sedang berjalan.
     const w=wrap.offsetWidth,h=wrap.offsetHeight;
-    if(w<10||h<10)return; // belum ter-render, coba lagi nanti
+    if(w<10||h<10){
+      // Belum ter-render (mis. jendela baru pindah monitor & masih blank sesaat).
+      // Coba lagi beberapa kali dengan jeda — TERBATAS, bukan loop tanpa henti.
+      if(_cdScaleRetries<8){_cdScaleRetries++;setTimeout(applyCdScale,120)}
+      return;
+    }
+    _cdScaleRetries=0;
     const availW=window.innerWidth*0.94;
     const availH=window.innerHeight*0.88;
     let scale=Math.min(availW/w,availH/h);
@@ -1983,10 +1992,30 @@ function applyCdScale(){
     wrap.style.transform='scale('+scale.toFixed(4)+')';
   });
 }
-window.addEventListener('resize',()=>{clearTimeout(_cdScaleTimer);_cdScaleTimer=setTimeout(applyCdScale,150)});
-// Catatan: saat jendela dipindah ke monitor dengan resolusi/skala berbeda, browser otomatis
-// memicu event "resize" — jadi skala dihitung ulang lewat listener di atas, tanpa perlu
-// polling/paksa-repaint apapun (pendekatan paksa-repaint sebelumnya justru membebani GPU).
+// Pancingan repaint yang SANGAT ringan & satu-kali (bukan loop, bukan display-thrash):
+// cuma menggeser opacity 0.999→1 dalam dua frame. Cukup untuk memaksa Chrome menggambar
+// ulang isi jendela yang "blank" setelah pindah monitor, tanpa membebani GPU.
+let _cdRepaintBusy=false;
+function cdGentleRepaint(){
+  if(_cdRepaintBusy)return;
+  _cdRepaintBusy=true;
+  const cd=document.getElementById('customerDisplay');
+  requestAnimationFrame(()=>{
+    if(cd)cd.style.opacity='0.999';
+    requestAnimationFrame(()=>{
+      if(cd)cd.style.opacity='1';
+      applyCdScale();
+      _cdRepaintBusy=false;
+    });
+  });
+}
+window.addEventListener('resize',()=>{clearTimeout(_cdScaleTimer);_cdScaleTimer=setTimeout(()=>{applyCdScale();cdGentleRepaint()},150)});
+// Saat jendela pindah ke monitor beda resolusi/skala, browser otomatis memicu "resize" —
+// kita hitung ulang skala + pancing repaint ringan supaya isi tidak blank. Kita juga pancing
+// ulang saat jendela mendapat fokus atau kembali terlihat (mis. setelah di-drag lalu diklik).
+// Semua ini DIPICU OLEH KEJADIAN (event), bukan polling — jadi ringan & tidak menumpuk.
+window.addEventListener('focus',()=>{if(isCustomerDisplayMode())cdGentleRepaint()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&isCustomerDisplayMode())cdGentleRepaint()});
 
 // ══ CAROUSEL — slideshow bergantian di layar sambutan (idle) ══
 const CD_SLIDE_IDS=['cdSlideTier','cdSlidePromo'];
@@ -2056,6 +2085,9 @@ function initCustomerDisplayWindow(){
   startCdCarousel();
   applyCdScale();
   setTimeout(applyCdScale,400); // ulang sekali lagi setelah font/layout benar-benar settle
+  // Kalau jendela ini baru dibuka lalu langsung dipindah otomatis ke monitor kedua, isinya
+  // kadang blank sesaat — pancing repaint ringan beberapa kali di 3 detik pertama untuk memulihkannya.
+  [700,1500,2600].forEach(ms=>setTimeout(cdGentleRepaint,ms));
 
   const params=new URLSearchParams(window.location.search);
   const fbParam=params.get('fb');
