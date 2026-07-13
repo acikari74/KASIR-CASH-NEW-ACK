@@ -532,18 +532,22 @@ tr:hover td{background:#FAFBFF}
 /* ═══ CUSTOMER DISPLAY ═══════════════════════════════════════ */
 #customerDisplay{display:none;position:fixed;inset:0;z-index:5000;overflow:hidden;
   background:linear-gradient(160deg, #060B18 0%, #0A1428 45%, #13173A 100%);
-  flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:var(--sans);transition:background .4s ease}
-#customerDisplay::before,#customerDisplay::after,#customerDisplay .cd-blob3{content:'';position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;transition:opacity .4s ease}
-#customerDisplay::before{width:560px;height:560px;background:radial-gradient(circle, rgba(42,94,224,.5), transparent 70%);top:-160px;left:-140px;opacity:.65;animation:blobDrift1 24s ease-in-out infinite}
-#customerDisplay::after{width:500px;height:500px;background:radial-gradient(circle, rgba(216,185,92,.4), transparent 70%);bottom:-160px;right:-120px;opacity:.6;animation:blobDrift2 28s ease-in-out infinite}
-.cd-blob3{width:420px;height:420px;background:radial-gradient(circle, rgba(21,154,107,.32), transparent 70%);top:38%;right:-100px;opacity:.5;animation:blobDrift3 20s ease-in-out infinite}
-@keyframes blobDrift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(70px,50px) scale(1.15)}}
-@keyframes blobDrift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-60px,-40px) scale(1.12)}}
-@keyframes blobDrift3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-40px,30px) scale(1.1)}}
+  flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:var(--sans)}
+#customerDisplay::before,#customerDisplay::after,#customerDisplay .cd-blob3{content:'';position:absolute;border-radius:50%;filter:blur(34px);pointer-events:none;z-index:0;will-change:transform;transform:translateZ(0);backface-visibility:hidden}
+#customerDisplay::before{width:560px;height:560px;background:radial-gradient(circle, rgba(42,94,224,.4), transparent 70%);top:-160px;left:-140px;opacity:.6;animation:blobDrift1 24s ease-in-out infinite}
+#customerDisplay::after{width:500px;height:500px;background:radial-gradient(circle, rgba(216,185,92,.32), transparent 70%);bottom:-160px;right:-120px;opacity:.55;animation:blobDrift2 28s ease-in-out infinite}
+.cd-blob3{width:420px;height:420px;background:radial-gradient(circle, rgba(21,154,107,.26), transparent 70%);top:38%;right:-100px;opacity:.45;animation:blobDrift3 20s ease-in-out infinite}
+@keyframes blobDrift1{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(70px,50px) scale(1.15)}}
+@keyframes blobDrift2{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(-60px,-40px) scale(1.12)}}
+@keyframes blobDrift3{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(-40px,30px) scale(1.1)}}
 /* MODE PUTIH — dipakai khusus untuk layar sambutan (slide 1 & 2), bukan layar member/sukses */
+/* PENTING: di mode putih, blob dekoratif benar-benar DIMATIKAN (content:none), bukan cuma
+   disembunyikan — karena efek blur besar yang tetap beranimasi di belakang layar adalah
+   penyebab layar berkedip/hitam saat jendela di-drag antar monitor (beban GPU). */
 #customerDisplay.cd-bg-white{background:linear-gradient(180deg,#ffffff,#fbfaf6)}
-#customerDisplay.cd-bg-white::before,#customerDisplay.cd-bg-white::after,#customerDisplay.cd-bg-white .cd-blob3{opacity:0}
-#cdScaleWrap{display:flex;flex-direction:column;align-items:center;transform-origin:center center;transition:transform .25s ease;position:relative;z-index:1}
+#customerDisplay.cd-bg-white::before,#customerDisplay.cd-bg-white::after{content:none}
+#customerDisplay.cd-bg-white .cd-blob3{display:none}
+#cdScaleWrap{display:flex;flex-direction:column;align-items:center;transform-origin:center center;position:relative;z-index:1}
 .cd-brand{display:none}
 .cd-brand-icon{width:42px;height:42px;background:var(--foil);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--navy-950)}
 .cd-brand-txt{color:#fff;font-size:15px;font-weight:700;display:flex;flex-direction:column}
@@ -598,7 +602,7 @@ tr:hover td{background:#FAFBFF}
 .cd-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);transition:all .3s;cursor:pointer;border:none;padding:0}
 .cd-dot.active{background:var(--foil);width:24px;border-radius:5px}
 
-.cd-card{border-radius:32px;padding:34px 40px;width:520px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);position:relative;overflow:hidden;margin-bottom:28px;background:linear-gradient(125deg,#2B2354,#100B26);backdrop-filter:blur(10px);animation:cdFloat 5s ease-in-out infinite}
+.cd-card{border-radius:32px;padding:34px 40px;width:520px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);position:relative;overflow:hidden;margin-bottom:28px;background:linear-gradient(125deg,#2B2354,#100B26);animation:cdFloat 5s ease-in-out infinite}
 .cd-card.regular{background:linear-gradient(140deg,#4A5578,#282F45)}
 .cd-card.silver{background:linear-gradient(140deg,#A7B2C4,#616D82)}
 .cd-card.gold{background:linear-gradient(140deg,#F0CD70,#B4872A)}
@@ -609,19 +613,19 @@ tr:hover td{background:#FAFBFF}
 .cd-card::before{content:'';position:absolute;left:-30px;top:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.1), transparent 70%)}
 .cd-card-top{display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;margin-bottom:22px}
 .cd-card-chip{width:36px;height:26px;border-radius:7px;background:linear-gradient(135deg,#F3DFA0,#C9A445);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
-.cd-card-tier{font-size:11px;font-weight:800;padding:6px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.cd-card-tier{font-size:11px;font-weight:800;padding:6px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.25)}
 .cd-card-name{font-family:var(--serif);font-size:32px;font-weight:600;color:#fff;position:relative;z-index:1;letter-spacing:-.01em}
 .cd-card-id{font-family:var(--mono);font-size:16px;color:rgba(255,255,255,.55);margin-top:8px;letter-spacing:.1em;position:relative;z-index:1}
 
 .cd-points-row{display:flex;gap:18px;width:520px;max-width:92vw}
-.cd-points-box{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:20px 22px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 10px 26px rgba(0,0,0,.2)}
+.cd-points-box{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:20px 22px;box-shadow:0 10px 26px rgba(0,0,0,.2)}
 .cd-points-lbl{font-size:13px;color:rgba(255,255,255,.5);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
 .cd-points-num{font-family:var(--serif);font-size:48px;font-weight:600;background:var(--foil);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.02em}
 .cd-progress-track{background:rgba(255,255,255,.12);border-radius:20px;height:9px;overflow:hidden;margin-top:6px}
 .cd-progress-bar{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--violet-600),#a78bfa);transition:width .6s ease}
 .cd-progress-txt{font-size:13px;color:rgba(255,255,255,.55);margin-top:8px;font-weight:600}
 
-.cd-trx-banner{margin-top:22px;background:rgba(21,154,107,.16);border:1px solid rgba(110,231,183,.35);border-radius:22px;padding:18px 24px;width:440px;max-width:90vw;backdrop-filter:blur(12px);animation:cdPulse 1.6s ease-in-out infinite}
+.cd-trx-banner{margin-top:22px;background:rgba(21,154,107,.16);border:1px solid rgba(110,231,183,.35);border-radius:22px;padding:18px 24px;width:440px;max-width:90vw;animation:cdPulse 1.6s ease-in-out infinite}
 @keyframes cdPulse{0%,100%{opacity:1}50%{opacity:.78}}
 .cd-trx-lbl{font-size:13px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
 .cd-trx-jenis{font-size:22px;font-weight:700;color:#fff}
@@ -1601,16 +1605,21 @@ function handleOpenCustomerDisplayClick(e){
   _cdWindowRef=win;
   const saved=getCdSavedPosition();
   if(saved){
-    try{
-      win.moveTo(saved.left,saved.top);
-      win.resizeTo(saved.width,saved.height);
-      toast('🖥️ Layar Customer dibuka di posisi tersimpan','ok');
-    }catch(err){toast('🖥️ Layar Customer dibuka','ok')}
+    applyWindowPosition(win,saved);
+    toast('🖥️ Layar Customer dibuka di posisi tersimpan','ok');
     return false;
   }
   toast('🖥️ Layar Customer dibuka — mencoba pindah otomatis ke monitor kedua...','ok');
   positionOnSecondScreen(win);
   return false;
+}
+// moveTo/resizeTo sering DIABAIKAN browser kalau dipanggil terlalu cepat (jendela baru
+// belum selesai termuat). Solusi: ulangi penempatan beberapa kali dalam 2 detik pertama —
+// yang sudah pas tidak terlihat pindah, yang tadinya gagal jadi ketarik ke posisi benar.
+function applyWindowPosition(win,pos){
+  const attempt=()=>{try{win.moveTo(pos.left,pos.top);win.resizeTo(pos.width,pos.height)}catch(e){}};
+  attempt();
+  [200,500,1000,1800].forEach(ms=>setTimeout(attempt,ms));
 }
 async function positionOnSecondScreen(win){
   try{
@@ -1618,10 +1627,10 @@ async function positionOnSecondScreen(win){
       const details=await window.getScreenDetails();
       if(details.screens&&details.screens.length>1){
         const target=details.screens.find(s=>s!==details.currentScreen)||details.screens[1];
-        win.moveTo(target.left,target.top);
-        win.resizeTo(target.width,target.height);
+        const pos={left:target.left,top:target.top,width:target.width,height:target.height};
+        applyWindowPosition(win,pos);
         // Berhasil dideteksi otomatis — langsung diingat juga supaya berikutnya makin pasti & cepat
-        setCdSavedPosition({left:target.left,top:target.top,width:target.width,height:target.height});
+        setCdSavedPosition(pos);
         setTimeout(()=>toast('✅ Otomatis dipindah ke monitor kedua & posisi diingat','ok'),400);
         return;
       }
@@ -1632,8 +1641,7 @@ async function positionOnSecondScreen(win){
   // bisa menguncinya lewat tombol 📍 "Ingat Posisi Ini" di menu info (ⓘ) supaya pasti ke depannya.
   try{
     if(window.screen&&window.screen.width){
-      win.moveTo(window.screen.width,0);
-      win.resizeTo(window.screen.width,window.screen.height);
+      applyWindowPosition(win,{left:window.screen.width,top:0,width:window.screen.width,height:window.screen.height});
       setTimeout(()=>toast('📍 Kalau posisi sudah pas, klik ⓘ di sebelah menu → "Ingat Posisi Ini" supaya otomatis terus','ok'),1200);
     }
   }catch(err){/* kalau ini pun gagal, biarkan jendela di posisi awal — masih bisa digeser manual */}
@@ -1996,6 +2004,32 @@ function applyCdScale(){
   });
 }
 window.addEventListener('resize',()=>{clearTimeout(_cdScaleTimer);_cdScaleTimer=setTimeout(applyCdScale,150)});
+
+// ══ DETEKSI PINDAH MONITOR — pulihkan tampilan otomatis saat jendela di-drag antar layar ══
+// Saat jendela dipindah ke monitor lain (apalagi beda resolusi/skala), browser kadang
+// glitch (layar hitam/kedip). Kita pantau posisi & rasio piksel jendela; begitu terdeteksi
+// pindah, paksa gambar-ulang bersih (repaint) + hitung ulang skala supaya tampilan pulih sendiri.
+let _cdLastScreenX=window.screenX,_cdLastScreenY=window.screenY,_cdLastDpr=window.devicePixelRatio;
+function cdForceRepaint(){
+  const cd=document.getElementById('customerDisplay');
+  if(!cd||cd.style.display==='none')return;
+  cd.style.display='none';
+  void cd.offsetHeight; // paksa reflow
+  cd.style.display='flex';
+  applyCdScale();
+}
+setInterval(()=>{
+  const cd=document.getElementById('customerDisplay');
+  if(!cd||cd.style.display==='none'||cd.style.display==='')return;
+  const movedFar=Math.abs(window.screenX-_cdLastScreenX)>120||Math.abs(window.screenY-_cdLastScreenY)>120;
+  const dprChanged=window.devicePixelRatio!==_cdLastDpr;
+  if(movedFar||dprChanged){
+    _cdLastScreenX=window.screenX;_cdLastScreenY=window.screenY;_cdLastDpr=window.devicePixelRatio;
+    setTimeout(cdForceRepaint,250); // beri waktu drag selesai dulu, baru pulihkan
+  } else {
+    _cdLastScreenX=window.screenX;_cdLastScreenY=window.screenY;
+  }
+},500);
 
 // ══ CAROUSEL — slideshow bergantian di layar sambutan (idle) ══
 const CD_SLIDE_IDS=['cdSlideTier','cdSlidePromo'];
