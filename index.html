@@ -506,12 +506,7 @@ tr:hover td{background:#FAFBFF}
 
 /* Versi untuk Layar Customer (dark theme, ukuran lebih besar) */
 .cd-tier-promo{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;width:min(1080px,92vw);margin-top:0}
-.cd-tp-card{border-radius:28px;overflow:hidden;background:#fff;border:1px solid var(--ink-100);box-shadow:0 14px 34px rgba(20,30,60,.14);animation:cdFloat 5s ease-in-out infinite}
-.cd-tp-card:nth-child(2){animation-delay:.3s}
-.cd-tp-card:nth-child(3){animation-delay:.6s}
-.cd-tp-card:nth-child(4){animation-delay:.9s}
-.cd-tp-card:nth-child(5){animation-delay:1.2s}
-@keyframes cdFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.cd-tp-card{border-radius:28px;overflow:hidden;background:#fff;border:1px solid var(--ink-100);box-shadow:0 14px 34px rgba(20,30,60,.14)}
 .cd-tp-head{padding:18px 8px 16px;text-align:center;position:relative;overflow:hidden}
 .cd-tp-head.regular{background:linear-gradient(140deg,#4A5578,#282F45)}
 .cd-tp-head.silver{background:linear-gradient(140deg,#A7B2C4,#616D82)}
@@ -531,22 +526,18 @@ tr:hover td{background:#FAFBFF}
 
 /* ═══ CUSTOMER DISPLAY ═══════════════════════════════════════ */
 #customerDisplay{display:none;position:fixed;inset:0;z-index:5000;overflow:hidden;
-  background:linear-gradient(160deg, #060B18 0%, #0A1428 45%, #13173A 100%);
+  /* Nuansa warna dibuat STATIS (dibakar langsung ke background) — tanpa blur, tanpa animasi,
+     tanpa akselerasi GPU. Ini keputusan sengaja setelah efek blur beranimasi terbukti bikin
+     layar hitam bahkan crash di sebagian perangkat saat jendela dipindah antar monitor. */
+  background:
+    radial-gradient(900px 600px at 8% -5%, rgba(42,94,224,.30), transparent 60%),
+    radial-gradient(800px 550px at 104% 106%, rgba(189,149,48,.22), transparent 55%),
+    radial-gradient(600px 500px at 108% 40%, rgba(21,154,107,.14), transparent 60%),
+    linear-gradient(160deg, #060B18 0%, #0A1428 45%, #13173A 100%);
   flex-direction:column;align-items:center;justify-content:center;padding:40px;font-family:var(--sans)}
-#customerDisplay::before,#customerDisplay::after,#customerDisplay .cd-blob3{content:'';position:absolute;border-radius:50%;filter:blur(34px);pointer-events:none;z-index:0;will-change:transform;transform:translateZ(0);backface-visibility:hidden}
-#customerDisplay::before{width:560px;height:560px;background:radial-gradient(circle, rgba(42,94,224,.4), transparent 70%);top:-160px;left:-140px;opacity:.6;animation:blobDrift1 24s ease-in-out infinite}
-#customerDisplay::after{width:500px;height:500px;background:radial-gradient(circle, rgba(216,185,92,.32), transparent 70%);bottom:-160px;right:-120px;opacity:.55;animation:blobDrift2 28s ease-in-out infinite}
-.cd-blob3{width:420px;height:420px;background:radial-gradient(circle, rgba(21,154,107,.26), transparent 70%);top:38%;right:-100px;opacity:.45;animation:blobDrift3 20s ease-in-out infinite}
-@keyframes blobDrift1{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(70px,50px) scale(1.15)}}
-@keyframes blobDrift2{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(-60px,-40px) scale(1.12)}}
-@keyframes blobDrift3{0%,100%{transform:translateZ(0) translate(0,0) scale(1)}50%{transform:translateZ(0) translate(-40px,30px) scale(1.1)}}
 /* MODE PUTIH — dipakai khusus untuk layar sambutan (slide 1 & 2), bukan layar member/sukses */
-/* PENTING: di mode putih, blob dekoratif benar-benar DIMATIKAN (content:none), bukan cuma
-   disembunyikan — karena efek blur besar yang tetap beranimasi di belakang layar adalah
-   penyebab layar berkedip/hitam saat jendela di-drag antar monitor (beban GPU). */
 #customerDisplay.cd-bg-white{background:linear-gradient(180deg,#ffffff,#fbfaf6)}
-#customerDisplay.cd-bg-white::before,#customerDisplay.cd-bg-white::after{content:none}
-#customerDisplay.cd-bg-white .cd-blob3{display:none}
+.cd-blob3{display:none}
 #cdScaleWrap{display:flex;flex-direction:column;align-items:center;transform-origin:center center;position:relative;z-index:1}
 .cd-brand{display:none}
 .cd-brand-icon{width:42px;height:42px;background:var(--foil);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:16px;font-weight:700;color:var(--navy-950)}
@@ -560,7 +551,7 @@ tr:hover td{background:#FAFBFF}
 .cd-logo-right{height:74px}
 @keyframes cdFadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 
-.cd-idle-icon{font-size:46px;margin-bottom:8px;opacity:.9;display:inline-block;animation:cdFloat 4s ease-in-out infinite}
+.cd-idle-icon{font-size:46px;margin-bottom:8px;opacity:.9;display:inline-block}
 .cd-idle-title{font-family:var(--serif);font-size:34px;font-weight:600;color:var(--navy-900);letter-spacing:-.02em;margin-bottom:8px}
 .cd-idle-sub{font-size:14px;color:var(--ink-500);line-height:1.5;max-width:560px}
 .cd-idle-cta{margin-top:16px;font-size:12.5px;color:var(--gold-600);font-weight:600;background:var(--gold-lt);border:1px solid rgba(216,185,92,.4);padding:9px 20px;border-radius:30px}
@@ -575,10 +566,7 @@ tr:hover td{background:#FAFBFF}
 .promo-hero-title::before,.promo-hero-title::after{content:'✦';color:var(--gold-600);font-size:15px;margin:0 12px;vertical-align:middle;-webkit-text-fill-color:var(--gold-600)}
 .promo-featured{display:flex;justify-content:space-evenly;margin-bottom:12px;align-items:center;width:100%}
 .promo-grid{display:flex;justify-content:space-evenly;align-items:center;width:100%}
-.promo-card{display:flex;flex-direction:column;align-items:center;gap:8px;animation:cdFloat 5s ease-in-out infinite}
-.promo-card:nth-child(2){animation-delay:.4s}
-.promo-card:nth-child(3){animation-delay:.8s}
-.promo-card:nth-child(4){animation-delay:.2s}
+.promo-card{display:flex;flex-direction:column;align-items:center;gap:8px}
 .promo-photo{width:100px;height:100px;border-radius:24px;background:linear-gradient(160deg,#fff,#f2f4fa);display:flex;align-items:center;justify-content:center;padding:9px;box-shadow:0 10px 22px rgba(20,30,60,.16),0 0 0 1px var(--ink-100);border:1px solid rgba(255,255,255,.6)}
 .promo-photo img{max-width:100%;max-height:100%;object-fit:contain;display:block}
 .promo-card.featured .promo-photo{width:158px;height:158px;border-radius:32px;box-shadow:0 12px 26px rgba(20,30,60,.18),0 0 0 1px rgba(216,185,92,.35)}
@@ -602,7 +590,7 @@ tr:hover td{background:#FAFBFF}
 .cd-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);transition:all .3s;cursor:pointer;border:none;padding:0}
 .cd-dot.active{background:var(--foil);width:24px;border-radius:5px}
 
-.cd-card{border-radius:32px;padding:34px 40px;width:520px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);position:relative;overflow:hidden;margin-bottom:28px;background:linear-gradient(125deg,#2B2354,#100B26);animation:cdFloat 5s ease-in-out infinite}
+.cd-card{border-radius:32px;padding:34px 40px;width:520px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);position:relative;overflow:hidden;margin-bottom:28px;background:linear-gradient(125deg,#2B2354,#100B26)}
 .cd-card.regular{background:linear-gradient(140deg,#4A5578,#282F45)}
 .cd-card.silver{background:linear-gradient(140deg,#A7B2C4,#616D82)}
 .cd-card.gold{background:linear-gradient(140deg,#F0CD70,#B4872A)}
@@ -1240,19 +1228,11 @@ tr:hover td{background:#FAFBFF}
       <div class="cd-slide" id="cdSlidePromo">
         <div class="confetti-field">
           <span class="confetti-piece" style="left:3%;background:var(--gold-400);animation-duration:3.6s;animation-delay:0s"></span>
-          <span class="confetti-piece" style="left:10%;background:var(--emerald-500);animation-duration:4.2s;animation-delay:.4s"></span>
           <span class="confetti-piece round" style="left:17%;background:var(--violet-500);animation-duration:3.9s;animation-delay:1.1s"></span>
-          <span class="confetti-piece" style="left:25%;background:var(--rose-500);animation-duration:4.6s;animation-delay:.2s"></span>
           <span class="confetti-piece round" style="left:33%;background:var(--gold-300);animation-duration:3.4s;animation-delay:1.6s"></span>
-          <span class="confetti-piece" style="left:41%;background:var(--blue-400);animation-duration:4.1s;animation-delay:.8s"></span>
           <span class="confetti-piece round" style="left:50%;background:var(--emerald-500);animation-duration:3.8s;animation-delay:2s"></span>
-          <span class="confetti-piece" style="left:58%;background:var(--gold-400);animation-duration:4.4s;animation-delay:.5s"></span>
           <span class="confetti-piece round" style="left:66%;background:var(--rose-500);animation-duration:3.7s;animation-delay:1.4s"></span>
-          <span class="confetti-piece" style="left:74%;background:var(--violet-500);animation-duration:4.3s;animation-delay:.1s"></span>
           <span class="confetti-piece round" style="left:82%;background:var(--gold-300);animation-duration:3.5s;animation-delay:1.8s"></span>
-          <span class="confetti-piece" style="left:90%;background:var(--blue-400);animation-duration:4.5s;animation-delay:.6s"></span>
-          <span class="confetti-piece round" style="left:96%;background:var(--emerald-500);animation-duration:3.9s;animation-delay:1.2s"></span>
-          <span class="confetti-piece" style="left:47%;background:var(--rose-500);animation-duration:4s;animation-delay:2.3s"></span>
         </div>
         <div class="promo-firework fw1">🎆</div>
         <div class="promo-firework fw2">🎉</div>
@@ -2004,32 +1984,9 @@ function applyCdScale(){
   });
 }
 window.addEventListener('resize',()=>{clearTimeout(_cdScaleTimer);_cdScaleTimer=setTimeout(applyCdScale,150)});
-
-// ══ DETEKSI PINDAH MONITOR — pulihkan tampilan otomatis saat jendela di-drag antar layar ══
-// Saat jendela dipindah ke monitor lain (apalagi beda resolusi/skala), browser kadang
-// glitch (layar hitam/kedip). Kita pantau posisi & rasio piksel jendela; begitu terdeteksi
-// pindah, paksa gambar-ulang bersih (repaint) + hitung ulang skala supaya tampilan pulih sendiri.
-let _cdLastScreenX=window.screenX,_cdLastScreenY=window.screenY,_cdLastDpr=window.devicePixelRatio;
-function cdForceRepaint(){
-  const cd=document.getElementById('customerDisplay');
-  if(!cd||cd.style.display==='none')return;
-  cd.style.display='none';
-  void cd.offsetHeight; // paksa reflow
-  cd.style.display='flex';
-  applyCdScale();
-}
-setInterval(()=>{
-  const cd=document.getElementById('customerDisplay');
-  if(!cd||cd.style.display==='none'||cd.style.display==='')return;
-  const movedFar=Math.abs(window.screenX-_cdLastScreenX)>120||Math.abs(window.screenY-_cdLastScreenY)>120;
-  const dprChanged=window.devicePixelRatio!==_cdLastDpr;
-  if(movedFar||dprChanged){
-    _cdLastScreenX=window.screenX;_cdLastScreenY=window.screenY;_cdLastDpr=window.devicePixelRatio;
-    setTimeout(cdForceRepaint,250); // beri waktu drag selesai dulu, baru pulihkan
-  } else {
-    _cdLastScreenX=window.screenX;_cdLastScreenY=window.screenY;
-  }
-},500);
+// Catatan: saat jendela dipindah ke monitor dengan resolusi/skala berbeda, browser otomatis
+// memicu event "resize" — jadi skala dihitung ulang lewat listener di atas, tanpa perlu
+// polling/paksa-repaint apapun (pendekatan paksa-repaint sebelumnya justru membebani GPU).
 
 // ══ CAROUSEL — slideshow bergantian di layar sambutan (idle) ══
 const CD_SLIDE_IDS=['cdSlideTier','cdSlidePromo'];
