@@ -3409,11 +3409,42 @@ function copySetupUrl(){
   if(!url)return;
   navigator.clipboard.writeText(url).then(()=>toast('✓ Link setup disalin','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
 }
+// Parser toleran: menerima paste mentah dari Firebase Console, bukan cuma JSON murni.
+// Firebase Console biasanya kasih format JS: `const firebaseConfig = { apiKey: "...", ... };`
+// yang BUKAN JSON valid (key tanpa kutip, ada "const ... =", ada titik-koma di akhir, dll).
+// Fungsi ini membersihkan itu semua sebelum divalidasi.
+function parseFirebaseConfigLoose(raw){
+  let s=raw.trim();
+  // buang komentar // dan /* */ (kalau ada yg ke-copy)
+  s=s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
+  // buang prefix seperti "const firebaseConfig =", "let x=", "var x =", "export default"
+  s=s.replace(/^\s*(export\s+default\s*|(const|let|var)\s+\w+\s*=\s*)/,'');
+  // buang titik-koma di akhir
+  s=s.trim().replace(/;\s*$/,'');
+  // ambil hanya bagian {...} pertama kalau ada teks lain nyangkut
+  const m=s.match(/\{[\s\S]*\}/);
+  if(m)s=m[0];
+  // 1) coba langsung sebagai JSON murni
+  try{return JSON.parse(s)}catch(e){}
+  // 2) bersihkan: kasih kutip ke key yg belum berkutip, hapus trailing comma
+  let cleaned=s
+    .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":') // key: -> "key":
+    .replace(/'/g,'"') // single quote -> double quote
+    .replace(/,\s*([}\]])/g,'$1'); // hapus trailing comma sebelum } atau ]
+  try{return JSON.parse(cleaned)}catch(e){}
+  // 3) fallback terakhir: evaluasi sebagai literal objek JS (input milik admin sendiri, lokal)
+  try{
+    // eslint-disable-next-line no-new-func
+    const obj=(new Function('return ('+s+')'))();
+    if(obj&&typeof obj==='object')return obj;
+  }catch(e){}
+  return null;
+}
 function saveFirebaseConfigUI(){
   const raw=document.getElementById('fbConfigInput').value.trim();
   if(!raw){toast('Tempel dulu config Firebase-nya','err');return}
-  let cfg;
-  try{cfg=JSON.parse(raw)}catch(e){toast('Format JSON tidak valid — cek lagi copy-paste-nya dari Firebase Console','err');return}
+  const cfg=parseFirebaseConfigLoose(raw);
+  if(!cfg){toast('Format config tidak dikenali — pastikan Anda paste seluruh blok {...} dari Firebase Console','err');return}
   if(!cfg.databaseURL){toast('Config ini tidak punya "databaseURL" — pastikan Realtime Database sudah dibuat di Firebase Console','err');return}
   setFirebaseConfig(cfg);
   fbApp=null;fbDb=null; // reset supaya re-init pakai config baru
