@@ -1068,7 +1068,7 @@ tr:hover td{background:#FAFBFF}
 
           <div class="filter-card" style="margin-bottom:20px">
             <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer (opsional)</div>
-            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, data (transaksi, member, kas/saldo, dll) tersimpan <b>di masing-masing komputer sendiri-sendiri</b> — tidak nyambung satu sama lain. Aktifkan Firebase di bawah ini untuk 2 manfaat sekaligus (gratis, butuh internet):<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah, bukan cuma jendela kedua di komputer yang sama.</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Aktifkan koneksi database internet (Firebase, gratis) di bawah ini, maka <b>seluruh data (transaksi, member, kas/saldo, akun) tersimpan otomatis di database internet</b> — bukan lagi terkunci per-komputer:<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time. Data lama yang sudah ada di komputer ini pun ikut diunggah otomatis.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah.<br>3️⃣ Kalau internet putus sebentar, transaksi tetap tercatat di device dan <b>otomatis diunggah begitu internet kembali</b> — kasir tidak pernah berhenti.</div>
 
             <details style="margin-bottom:14px">
               <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 Cara bikin akun Firebase gratis (sekali saja, ± 5 menit, semua klik-klik saja)</summary>
@@ -1096,13 +1096,19 @@ tr:hover td{background:#FAFBFF}
             </details>
 
             <div class="fg">
-              <label>Tempel Firebase Config di sini</label>
-              <textarea class="fi" id="fbConfigInput" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","...":"..."}' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
+              <label>Tempel Firebase Config di sini (boleh apa adanya dari Firebase Console — sistem membersihkan &amp; menguji otomatis)</label>
+              <textarea class="fi" id="fbConfigInput" placeholder='const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  ...
+};   ← tempel persis seperti ini juga BISA, tidak perlu diedit' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:6px">
-              <button class="btn-primary" onclick="saveFirebaseConfigUI()">💾 Simpan Konfigurasi</button>
+              <button class="btn-primary" id="fbSaveBtn" onclick="saveFirebaseConfigUI()">💾 Simpan &amp; Uji Koneksi</button>
               <button class="btn-clr" onclick="removeFirebaseConfigUI()">🗑 Hapus Konfigurasi</button>
             </div>
+            <div id="fbConnStatus" style="display:none;border-radius:8px;padding:10px 13px;font-size:12px;font-weight:600;line-height:1.7;margin-bottom:6px"></div>
 
             <div id="fbLinkSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--ink-100)">
               <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:10px">✅ Sinkronisasi aktif untuk cabang: <span id="fbCabangLabel" style="font-family:var(--mono)">—</span></div>
@@ -1746,16 +1752,24 @@ function fbConfigKey(){return'bl_firebase_config'}
 function getFirebaseConfig(){try{const r=localStorage.getItem(fbConfigKey());return r?JSON.parse(r):null}catch(e){return null}}
 function setFirebaseConfig(cfg){localStorage.setItem(fbConfigKey(),JSON.stringify(cfg))}
 function clearFirebaseConfig(){localStorage.removeItem(fbConfigKey())}
-let fbApp=null,fbDb=null;
+let fbApp=null,fbDb=null,_fbAppSeq=0;
 function initFirebaseIfPossible(cfg){
   if(typeof firebase==='undefined')return null; // SDK belum/gagal dimuat (mis. sedang offline) — aman, fitur lain tetap jalan
   cfg=cfg||getFirebaseConfig();
   if(!cfg||!cfg.databaseURL)return null;
   try{
-    if(!fbApp)fbApp=firebase.initializeApp(cfg);
-    if(!fbDb)fbDb=firebase.database();
+    if(!fbApp){
+      _fbAppSeq++;
+      fbApp=firebase.initializeApp(cfg,'bl_app_'+_fbAppSeq); // named app: bisa dibuat ulang setelah ganti config
+      fbDb=fbApp.database();
+    }
     return fbDb;
   }catch(e){console.warn('Firebase init gagal:',e);return null}
+}
+function resetFirebaseApp(){
+  // Dipakai saat config diganti/dihapus supaya koneksi lama benar-benar dilepas
+  try{if(fbApp)fbApp.delete()}catch(e){}
+  fbApp=null;fbDb=null;_cloudListenerActive=false;
 }
 function cabangSyncId(){
   // Identitas path di Firebase untuk cabang ini — pakai username akun supaya tiap cabang punya "ruang" sendiri
@@ -1806,6 +1820,36 @@ function removeCloudRecord(kind,key){
   if(!db||!session)return;
   try{db.ref(cloudBase()+'/'+kind+'/'+key).remove()}catch(e){console.warn('Cloud remove record gagal:',e)}
 }
+
+// ══ TOMBSTONE — penanda hapus permanen ═══════════════════════════
+// Masalah tanpa ini: device lain yang masih menyimpan salinan lama (mis. sedang offline
+// saat penghapusan terjadi) akan MENGUNGGAH BALIK data itu ke cloud saat login berikutnya
+// (lewat seedCloudFromLocal) — data yang sudah dihapus "hidup lagi" di semua device.
+// Solusi: setiap penghapusan dicatat sebagai tombstone di cloud & lokal. Data yang sudah
+// ditandai tidak akan pernah di-merge maupun di-seed lagi, di device manapun.
+function getTombstones(){try{return JSON.parse(localStorage.getItem('bl_tombstones')||'{}')}catch(e){return{}}}
+function saveTombstones(t){localStorage.setItem('bl_tombstones',JSON.stringify(t))}
+function addTombstone(kind,key){
+  const t=getTombstones();
+  t[kind]=t[kind]||{};
+  t[kind][key]=Date.now();
+  // jaga ukuran: simpan maksimal 2000 penanda terbaru per jenis
+  const keys=Object.keys(t[kind]);
+  if(keys.length>2000){keys.sort((a,b)=>t[kind][a]-t[kind][b]).slice(0,keys.length-2000).forEach(k=>delete t[kind][k])}
+  saveTombstones(t);
+}
+function isTombstoned(kind,key){const t=getTombstones();return !!(t[kind]&&t[kind][key]!==undefined)}
+function tombstoneAndRemoveCloud(kind,key,meta){
+  addTombstone(kind,key);
+  pushCloudRecord('deleted/'+kind,key,Object.assign({ts:Date.now()},meta||{}));
+  removeCloudRecord(kind,key);
+}
+function applyRemoteTombstone(kind,key,val){
+  if(isTombstoned(kind,key))return;
+  addTombstone(kind,key);
+  if(kind==='members')removeMemberRecordLocal(key);
+  else if(kind==='trx'&&val&&val.tgl)removeTrxRecordLocal(val.tgl,parseInt(key)||val.origTs||key);
+}
 function collectSmallStateForSync(){
   const snap={};
   const singularKeys=['bl_kasfisik_'+session.user,'bl_kasreset_'+session.user];
@@ -1828,9 +1872,39 @@ function scheduleCloudState(){
   _cloudStateTimer=setTimeout(pushCloudState,900);
 }
 
+// ══ SEED — unggah SEMUA data lokal yang sudah ada ke cloud ══════
+// Tanpa ini, transaksi/member yang dicatat SEBELUM sinkron diaktifkan tidak akan
+// pernah naik ke database internet (kode lama hanya mengunggah catatan BARU).
+// Dipanggil saat sinkron pertama kali aktif & setiap login, supaya dua arah penuh:
+// cloud → lokal (tarik) lalu lokal → cloud (unggah), tidak ada data tertinggal.
+function seedCloudFromLocal(){
+  const db=initFirebaseIfPossible();
+  if(!db||!session)return;
+  try{
+    const tomb=getTombstones();
+    const tombHas=(kind,key)=>!!(tomb[kind]&&tomb[kind][key]!==undefined);
+    const updates={};
+    Object.keys(localStorage).forEach(k=>{
+      let kind=null;
+      if(k.indexOf('bl_trx_'+session.user+'_')===0)kind='trx';
+      else if(k.indexOf('bl_pindah_'+session.user+'_')===0)kind='pindah';
+      if(!kind)return;
+      try{JSON.parse(localStorage.getItem(k)).forEach(r=>{if(r&&r.ts!=null&&!tombHas(kind,String(r.ts)))updates[kind+'/'+r.ts]=r})}catch(e){}
+    });
+    try{getMembers().forEach(m=>{if(m&&m.id&&!tombHas('members',String(m.id)))updates['members/'+String(m.id).replace(/[.#$\[\]\/]/g,'_')]=m})}catch(e){}
+    try{JSON.parse(localStorage.getItem('bl_audit')||'[]').forEach(l=>{if(l&&l.ts)updates['audit/'+l.ts]=l})}catch(e){}
+    try{JSON.parse(localStorage.getItem('bl_redemptions')||'[]').forEach(r=>{if(r&&r.ts)updates['redeem/'+r.ts]=r})}catch(e){}
+    // sebarkan juga penanda hapus dari device ini ke cloud, supaya device lain ikut menghapus
+    Object.keys(tomb).forEach(kind=>{Object.keys(tomb[kind]).forEach(key=>{updates['deleted/'+kind+'/'+key]={ts:tomb[kind][key]}})});
+    if(Object.keys(updates).length)db.ref(cloudBase()).update(updates).catch(e=>console.warn('Seed cloud gagal:',e));
+    pushCloudState();
+  }catch(e){console.warn('Seed cloud gagal:',e)}
+}
+
 // ══ MERGE — gabungkan catatan yang masuk dari device lain ke data lokal ══
 function mergeTrxRecord(trx){
   if(!trx||!trx.tgl||!trx.ts)return;
+  if(isTombstoned('trx',String(trx.ts))){removeCloudRecord('trx',trx.ts);return} // sudah dihapus permanen — tolak & bersihkan sisa di cloud
   const key='bl_trx_'+session.user+'_'+trx.tgl;
   let arr=JSON.parse(localStorage.getItem(key)||'[]');
   const idx=arr.findIndex(r=>r.ts===trx.ts);
@@ -1860,6 +1934,7 @@ function mergePindahRecord(p){
 }
 function mergeMemberRecord(id,m){
   if(!m)return;
+  if(isTombstoned('members',String(id))){removeCloudRecord('members',id);return} // sudah dihapus permanen — tolak & bersihkan sisa di cloud
   let arr=getMembers();
   const idx=arr.findIndex(x=>x.id===id);
   if(idx>=0)arr[idx]=m;else arr.push(m);
@@ -1906,6 +1981,9 @@ function startCloudSyncListener(){
   db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
   db.ref(base+'/audit').on('child_added',snap=>mergeAuditRecord(snap.val()));
   db.ref(base+'/redeem').on('child_added',snap=>mergeRedeemRecord(snap.val()));
+  // penanda hapus dari device lain → langsung hapus di sini juga, permanen
+  db.ref(base+'/deleted/members').on('child_added',snap=>applyRemoteTombstone('members',snap.key,snap.val()));
+  db.ref(base+'/deleted/trx').on('child_added',snap=>applyRemoteTombstone('trx',snap.key,snap.val()));
   db.ref(cloudStatePath()).on('value',snap=>{
     const val=snap.val();
     if(!val||!val.data)return;
@@ -1928,6 +2006,12 @@ function tryStartCloudSync(onDone,tries){
   toast('🔄 Menyinkronkan data dari cloud...','ok');
   db.ref(cloudBase()).once('value').then(snap=>{
     const val=snap.val()||{};
+    // Proses penanda hapus DULU — supaya data yang sudah dihapus device lain
+    // langsung tercatat & tidak ikut ter-merge di langkah berikutnya
+    if(val.deleted){
+      if(val.deleted.members)Object.keys(val.deleted.members).forEach(id=>applyRemoteTombstone('members',id,val.deleted.members[id]));
+      if(val.deleted.trx)Object.keys(val.deleted.trx).forEach(ts=>applyRemoteTombstone('trx',ts,val.deleted.trx[ts]));
+    }
     if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
     if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
     if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
@@ -1939,7 +2023,9 @@ function tryStartCloudSync(onDone,tries){
     }
     onDone();
     startCloudSyncListener();
-  }).catch(err=>{console.warn('Cloud initial load gagal:',err);onDone();startCloudSyncListener()});
+    seedCloudFromLocal(); // unggah balik data lokal yang belum ada di cloud — sinkron dua arah penuh
+    watchFbConnected();
+  }).catch(err=>{console.warn('Cloud initial load gagal:',err);onDone();startCloudSyncListener();watchFbConnected()});
 }
 // Dipakai saat login gagal secara lokal — mungkin akun ini baru dibuat di device lain,
 // jadi coba tarik daftar akun terbaru dari cloud sebelum menyerah.
@@ -3002,7 +3088,7 @@ function hapus(idx){
     }
   }
   logAudit('HAPUS_TRANSAKSI',r.no+' · '+r.jenis+' · '+fmtRp(r.nominal)+' · Alasan: '+reason.trim());
-  data.splice(idx,1);saveData();removeCloudRecord('trx',r.ts);render();renderKas();toast('Transaksi dihapus')
+  data.splice(idx,1);saveData();tombstoneAndRemoveCloud('trx',r.ts,{tgl:r.tgl});render();renderKas();toast('Transaksi dihapus')
 }
 
 function renderStats(filtered){
@@ -3068,7 +3154,7 @@ function saveMember(){
 function deleteMember(id){
   const m=getMemberById(id);if(!m)return;
   if(!confirm('Hapus member '+m.nama+'?'))return;
-  saveMembers(getMembers().filter(x=>x.id!==id));removeCloudRecord('members',id);renderMembers();toast('Member dihapus');
+  saveMembers(getMembers().filter(x=>x.id!==id));tombstoneAndRemoveCloud('members',id);renderMembers();toast('Member dihapus');
 }
 function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
 function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
@@ -3393,6 +3479,7 @@ function renderFirebaseSyncUI(){
   if(cfg){
     input.value=JSON.stringify(cfg,null,2);
     section.style.display='block';
+    watchFbConnected();
     document.getElementById('fbCabangLabel').textContent=session?session.label+' ('+session.user+')':'—';
     const url=remoteCustomerDisplayUrl();
     document.getElementById('fbRemoteUrl').textContent=url;
@@ -3440,23 +3527,107 @@ function parseFirebaseConfigLoose(raw){
   }catch(e){}
   return null;
 }
-function saveFirebaseConfigUI(){
+// ══ UJI KONEKSI & AUTO-DETEKSI ALAMAT DATABASE ═══════════════════
+// Firebase Console versi baru sering TIDAK menyertakan "databaseURL" di config-nya
+// sama sekali (itulah kenapa penyimpanan config sering gagal). Solusinya: kita tebak
+// sendiri alamat database dari projectId (semua pola resmi Firebase), lalu UJI
+// baca-tulis sungguhan ke tiap kandidat — yang berhasil itulah yang dipakai.
+function fbCandidateUrls(cfg){
+  const urls=[];
+  if(cfg.databaseURL)urls.push(cfg.databaseURL.replace(/\/+$/,''));
+  const pid=cfg.projectId;
+  if(pid){
+    urls.push('https://'+pid+'-default-rtdb.asia-southeast1.firebasedatabase.app'); // region Singapura — paling umum utk Indonesia
+    urls.push('https://'+pid+'-default-rtdb.firebaseio.com');                       // region default AS
+    urls.push('https://'+pid+'-default-rtdb.europe-west1.firebasedatabase.app');
+    urls.push('https://'+pid+'.firebaseio.com');                                    // pola lama
+  }
+  return [...new Set(urls)];
+}
+function fbRestTest(baseUrl){
+  // Uji TULIS sungguhan (bukan cuma ping) — kalau rules menolak, kita tahu persis.
+  const clean=baseUrl.replace(/\/+$/,'');
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),8000);
+  return fetch(clean+'/brilink_sync/__tes_koneksi__.json',{method:'PUT',body:JSON.stringify({ts:Date.now()}),signal:ctrl.signal})
+    .then(async res=>{
+      clearTimeout(t);
+      if(res.ok)return{ok:true,url:clean};
+      let body='';try{body=await res.text()}catch(e){}
+      if(res.status===401||res.status===403||/permission/i.test(body))return{ok:false,reason:'rules',url:clean};
+      if(res.status===404)return{ok:false,reason:'notfound',url:clean};
+      return{ok:false,reason:'http'+res.status,url:clean};
+    })
+    .catch(()=>{clearTimeout(t);return{ok:false,reason:'network',url:clean}});
+}
+function setFbStatus(msg,type){
+  const el=document.getElementById('fbConnStatus');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML=msg;
+  const map={ok:['var(--emerald-lt)','var(--emerald-700)','#bfe8d2'],err:['var(--rose-lt)','var(--rose-700)','#f3caca'],wait:['var(--amber-lt)','var(--amber-600)','#efdcae']};
+  const c=map[type]||map.wait;
+  el.style.background=c[0];el.style.color=c[1];el.style.border='1px solid '+c[2];
+}
+let _fbConnWatchActive=false;
+function watchFbConnected(){
+  const db=initFirebaseIfPossible();
+  if(!db||_fbConnWatchActive)return;
+  _fbConnWatchActive=true;
+  try{
+    db.ref('.info/connected').on('value',snap=>{
+      if(snap.val()===true)setFbStatus('🟢 <b>Terhubung ke database internet</b> — semua data otomatis tersimpan di cloud & tersinkron real-time ke semua device.','ok');
+      else setFbStatus('🟡 <b>Sedang offline / menyambung ulang…</b> Data tetap tercatat di device ini dan otomatis diunggah begitu internet kembali.','wait');
+    });
+  }catch(e){}
+}
+async function saveFirebaseConfigUI(){
+  const btn=document.getElementById('fbSaveBtn');
   const raw=document.getElementById('fbConfigInput').value.trim();
   if(!raw){toast('Tempel dulu config Firebase-nya','err');return}
   const cfg=parseFirebaseConfigLoose(raw);
-  if(!cfg){toast('Format config tidak dikenali — pastikan Anda paste seluruh blok {...} dari Firebase Console','err');return}
-  if(!cfg.databaseURL){toast('Config ini tidak punya "databaseURL" — pastikan Realtime Database sudah dibuat di Firebase Console','err');return}
+  if(!cfg){setFbStatus('❌ Format config tidak dikenali. Pastikan Anda menyalin <b>seluruh blok {...}</b> dari Firebase Console (boleh apa adanya, termasuk tulisan "const firebaseConfig =").','err');toast('Format config tidak dikenali','err');return}
+  if(!cfg.projectId&&!cfg.databaseURL){setFbStatus('❌ Config ini tidak punya <b>projectId</b> maupun <b>databaseURL</b> — sepertinya yang di-copy bukan config Firebase. Ulangi copy dari Firebase Console → Project Settings → bagian "SDK setup and configuration".','err');toast('Config tidak lengkap','err');return}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Menguji koneksi…'}
+  setFbStatus('⏳ Menguji koneksi ke database internet… (mencoba beberapa alamat server otomatis)','wait');
+  const candidates=fbCandidateUrls(cfg);
+  let found=null,rulesUrl=null;
+  for(const u of candidates){
+    setFbStatus('⏳ Menguji: <span style="font-family:var(--mono)">'+u+'</span> …','wait');
+    const r=await fbRestTest(u);
+    if(r.ok){found=r.url;break}
+    if(r.reason==='rules'&&!rulesUrl)rulesUrl=r.url;
+  }
+  if(btn){btn.disabled=false;btn.textContent='💾 Simpan & Uji Koneksi'}
+  if(!found){
+    if(rulesUrl){
+      setFbStatus('❌ Database <b>ditemukan</b> di <span style="font-family:var(--mono)">'+rulesUrl+'</span> tapi <b>akses ditolak (Rules belum diizinkan)</b>.<br>Perbaiki: buka <b>Firebase Console → Build → Realtime Database → tab Rules</b>, ganti isinya sesuai contoh di bagian "Wajib update Rules" di atas, klik <b>Publish</b>, lalu klik Simpan lagi di sini.','err');
+      toast('Rules database belum diizinkan — lihat petunjuk di bawah kolom','err');
+    }else{
+      setFbStatus('❌ Tidak menemukan Realtime Database untuk project <b>'+(cfg.projectId||'?')+'</b>.<br>Penyebab paling umum: <b>Realtime Database belum dibuat</b>. Perbaiki: buka <b>Firebase Console → Build → Realtime Database → Create Database</b> (pilih lokasi mana saja, mode apa saja — nanti Rules diatur sesuai contoh di atas). Setelah itu klik Simpan lagi di sini. Pastikan juga internet komputer ini nyala.','err');
+      toast('Realtime Database belum dibuat / tidak terjangkau','err');
+    }
+    return;
+  }
+  cfg.databaseURL=found; // simpan alamat yang TERBUKTI jalan
   setFirebaseConfig(cfg);
-  fbApp=null;fbDb=null; // reset supaya re-init pakai config baru
+  resetFirebaseApp();
+  initFirebaseIfPossible(cfg);
   renderFirebaseSyncUI();
-  logAudit('SET_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh diaktifkan oleh '+session.nama);
-  toast('✓ Konfigurasi tersimpan — Layar Customer siap dipakai di device terpisah','ok');
+  logAudit('SET_FIREBASE_CONFIG','Sinkronisasi database internet diaktifkan ('+found+') oleh '+(session?session.nama:'-'));
+  toast('✓ Terhubung ke database internet','ok');
+  setFbStatus('✅ Terhubung ke <span style="font-family:var(--mono)">'+found+'</span> — mengunggah data lokal ke cloud…','ok');
+  // Langsung aktif tanpa perlu login ulang: tarik data cloud → unggah data lokal → dengarkan real-time
+  _cloudListenerActive=false;
+  tryStartCloudSync(()=>{});
 }
 function removeFirebaseConfigUI(){
-  if(!confirm('Hapus konfigurasi sinkronisasi jarak jauh? Layar customer di tablet/HP akan berhenti tersambung.'))return;
+  if(!confirm('Hapus konfigurasi sinkronisasi database internet? Device ini akan kembali menyimpan data sendiri-sendiri (tidak tersambung device lain).'))return;
   clearFirebaseConfig();
-  fbApp=null;fbDb=null;
+  resetFirebaseApp();
+  _fbConnWatchActive=false;
   document.getElementById('fbConfigInput').value='';
+  const st=document.getElementById('fbConnStatus');if(st)st.style.display='none';
   renderFirebaseSyncUI();
   logAudit('HAPUS_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh dinonaktifkan oleh '+session.nama);
   toast('Konfigurasi dihapus','ok');
