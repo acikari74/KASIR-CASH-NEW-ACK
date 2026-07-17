@@ -104,7 +104,15 @@ button{font-family:inherit}
 .app-shell{display:flex;height:100vh}
 
 /* RAIL (left sidebar navigation, banking-dashboard style) */
-.rail{width:232px;flex-shrink:0;background:linear-gradient(185deg,var(--navy-950),var(--navy-900) 70%);display:flex;flex-direction:column;height:100vh;position:relative}
+.rail{width:248px;flex-shrink:0;background:linear-gradient(185deg,var(--navy-950),var(--navy-900) 70%);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:920;transform:translateX(-100%);transition:transform .25s ease;box-shadow:6px 0 24px rgba(0,0,0,.25)}
+.rail.open{transform:translateX(0)}
+.rail-backdrop{display:none;position:fixed;inset:0;background:rgba(8,15,30,.45);z-index:910;backdrop-filter:blur(1px)}
+.rail-backdrop.show{display:block}
+.hamburger-btn{position:fixed;top:10px;left:10px;z-index:900;width:32px;height:32px;border-radius:9px;background:linear-gradient(185deg,var(--navy-950),var(--navy-900));border:1px solid rgba(216,185,92,.35);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;box-shadow:0 3px 10px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s}
+.hamburger-btn:hover{transform:scale(1.06);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.hamburger-btn span{display:block;width:14px;height:2px;border-radius:2px;background:var(--gold-500,#d8b95c);transition:all .2s}
+.rail-close-x{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.7);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+.rail-close-x:hover{background:rgba(255,255,255,.16);color:#fff}
 .rail::after{content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(216,185,92,.18) 30%,rgba(216,185,92,.18) 70%,transparent)}
 .rail-brand{display:flex;align-items:center;gap:9px;padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:6px}
 .rail-icon{width:28px;height:28px;background:var(--foil);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:11px;font-weight:700;color:var(--navy-950);flex-shrink:0;box-shadow:0 3px 8px rgba(189,149,48,.3)}
@@ -134,7 +142,7 @@ button{font-family:inherit}
 .tb-msep{height:1px;background:var(--paper-100);margin:2px 0}
 
 /* MAIN AREA */
-.app-main{flex:1;height:100vh;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.app-main{flex:1;height:100vh;overflow:hidden;display:flex;flex-direction:column;min-width:0;padding-left:48px}
 .page{display:none;height:100%;overflow:hidden}
 .page.active{display:flex;flex-direction:column;height:100%}
 
@@ -147,7 +155,7 @@ button{font-family:inherit}
 .resizer:hover::after,.resizer.dragging::after{background:var(--gold-500)}
 
 /* RAIL RESIZER — drag to resize the left navigation sidebar */
-.rail-resizer{width:6px;background:var(--navy-950);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
+.rail-resizer{display:none!important;width:6px;background:var(--navy-950);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
 .rail-resizer::before{content:'';position:absolute;top:0;bottom:0;left:2.5px;width:1px;background:rgba(255,255,255,.08);transition:background .15s}
 .rail-resizer:hover::before,.rail-resizer.dragging::before{background:var(--gold-500);width:2px;left:2px}
 .rail-resizer::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:26px;border-radius:3px;background:rgba(255,255,255,.18);pointer-events:none}
@@ -629,10 +637,6 @@ tr:hover td{background:#FAFBFF}
 
 /* ═══ RESPONSIVE ═══════════════════════════════════════════ */
 @media (max-width:980px){
-  .rail{width:76px}
-  .rail-brand-txt,.rail-name+*,.nb span:not(.nb-ic){display:none}
-  .nb{justify-content:center;padding:11px}
-  .rail-branch,.tb-uname,.tb-urole{display:none}
   .stats-grid,.kas-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
@@ -667,7 +671,6 @@ tr:hover td{background:#FAFBFF}
       <div class="lg"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="lg"><label>Nama Petugas</label><input id="loginNama" placeholder="Nama Anda" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="login-btn" onclick="doLogin()"><span>Masuk ke Sistem →</span></button>
-      <div class="login-hint"><b>Kasir:</b> cabang1–cabang10 (password: brilink123) &nbsp;·&nbsp; <b>Admin:</b> admin (password: admin123)<br>Password disimpan terenkripsi (hash). Segera ganti password default setelah login pertama.</div>
     </div>
   </div>
 </div>
@@ -676,8 +679,15 @@ tr:hover td{background:#FAFBFF}
 <div id="appScreen">
   <div class="app-shell">
 
-    <!-- RAIL / SIDEBAR NAVIGATION -->
-    <div class="rail">
+    <!-- HAMBURGER (garis tiga) — buka/tutup sidebar -->
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleRail()" title="Buka menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="rail-backdrop" id="railBackdrop" onclick="closeRail()"></div>
+
+    <!-- RAIL / SIDEBAR NAVIGATION (drawer) -->
+    <div class="rail" id="railDrawer">
+      <button class="rail-close-x" onclick="closeRail()" title="Tutup menu">✕</button>
       <div class="rail-brand">
         <div class="rail-icon">BR</div>
         <div class="rail-brand-txt">
@@ -824,7 +834,7 @@ tr:hover td{background:#FAFBFF}
                 <label>Nominal Transaksi</label>
                 <div class="money-wrap nominal-big">
                   <div class="money-pre">Rp</div>
-                  <input class="fi money-inp" id="fNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
+                  <input class="fi money-inp" id="fNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney(this);autoFeeFromNominal()">
                 </div>
               </div>
 
@@ -837,7 +847,7 @@ tr:hover td{background:#FAFBFF}
                   </div>
                 </div>
                 <div class="fg">
-                  <label>Fee Agen</label>
+                  <label>Fee Agen <span class="opt">otomatis, bisa diubah</span></label>
                   <div class="money-wrap">
                     <div class="money-pre">Rp</div>
                     <input class="fi money-inp" id="fFee" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
@@ -902,7 +912,6 @@ tr:hover td{background:#FAFBFF}
 
           <!-- MAIN PANEL -->
           <div class="main" id="mainPanel">
-            <div class="stats-grid" id="statsRow"></div>
             <div class="filter-card">
               <div class="filter-grid">
                 <div class="fg-f"><label>Tanggal</label><input type="date" id="fltTgl" onchange="filterChanged()"></div>
@@ -941,6 +950,7 @@ tr:hover td{background:#FAFBFF}
           <div class="pg-top">
             <div><div class="pg-heading">Kas &amp; Saldo</div><div class="pg-sub">Cek uang tunai dan saldo bank hari ini</div></div>
             <div class="pg-actions">
+              <button class="btn-purple" onclick="openPinjaman()">💳 Pinjaman</button>
               <button class="btn-purple" onclick="openPindahSaldo()">🔁 Pindahkan Saldo</button>
               <button class="btn-primary" id="btnAturSaldo" onclick="openSetSaldo()">💵 Atur Saldo</button>
             </div>
@@ -981,6 +991,13 @@ tr:hover td{background:#FAFBFF}
               <div class="tbl-title">Riwayat Pemindahan Hari Ini</div>
             </div>
             <div id="pindahHistList" style="max-height:280px;overflow-y:auto;padding:4px 20px"></div>
+          </div>
+
+          <div class="tbl-card" style="margin-bottom:20px">
+            <div class="tbl-head">
+              <div class="tbl-title">💳 Riwayat Pinjaman Hari Ini</div>
+            </div>
+            <div id="pinjamHistList" style="max-height:280px;overflow-y:auto;padding:4px 20px"></div>
           </div>
 
           <div class="limit-card">
@@ -1147,6 +1164,26 @@ tr:hover td{background:#FAFBFF}
               <button class="btn-primary" onclick="saveLimitSetting()">💾 Simpan Pengaturan</button>
             </div>
             <div style="font-size:11px;color:var(--ink-400);margin-top:10px;line-height:1.6">Kalau nominal satu transaksi Tarik Tunai atau Transfer melebihi angka ini, kasir wajib minta konfirmasi akun Admin sebelum transaksi bisa disimpan. Kosongkan / isi 0 untuk tanpa batas.</div>
+          </div>
+
+          <div class="tbl-card" style="margin-bottom:20px">
+            <div class="tbl-head">
+              <div class="tbl-title">⚡ Auto Fee Agen (berdasarkan nominal transaksi)</div>
+              <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-600);cursor:pointer;font-weight:600">
+                <input type="checkbox" id="feeAutoOn" onchange="saveFeeRules(true)"> Aktifkan
+              </label>
+            </div>
+            <div style="padding:14px 20px 18px">
+              <div style="font-size:11.5px;color:var(--ink-400);line-height:1.6;margin-bottom:12px">Saat kasir mengetik nominal transaksi, kolom <b>Fee Agen</b> di form kasir otomatis terisi sesuai tingkatan di bawah — tidak perlu input manual lagi. Kasir tetap bisa mengubahnya kalau perlu. Baris dengan "Sampai Nominal" dikosongkan / 0 berlaku untuk <b>di atas semua tingkat</b>.</div>
+              <table style="width:100%">
+                <thead><tr><th>Sampai Nominal (Rp)</th><th>Fee Agen (Rp)</th><th style="width:60px"></th></tr></thead>
+                <tbody id="feeRulesBody"></tbody>
+              </table>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn-primary" style="padding:7px 13px;font-size:11.5px" onclick="addFeeRule()">+ Tambah Tingkat</button>
+                <button class="btn-ok" style="padding:7px 13px;font-size:11.5px" onclick="saveFeeRules()">💾 Simpan Aturan Fee</button>
+              </div>
+            </div>
           </div>
 
           <div class="tbl-card" style="margin-bottom:20px">
@@ -1328,13 +1365,14 @@ tr:hover td{background:#FAFBFF}
     <div class="md-title"><span>💳</span><span id="modalMemberTitle">Tambah Member Baru</span></div>
     <input type="hidden" id="editMemberId">
     <div class="mgrid">
-      <div class="fg"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
-      <div class="fg"><label>No. HP *</label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
-      <div class="fg"><label>ID Kartu RFID *</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
+      <div class="fg" style="grid-column:span 2"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
+      <div class="fg" style="display:none"><label>No. HP</label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
+      <div class="fg" style="display:none"><label>ID Kartu RFID</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
       <div class="fg"><label>Tanggal lahir <span class="opt">opsional</span></label><input class="fi" id="mTglLahir" type="date"></div>
-      <div class="fg" style="grid-column:span 2"><label>Alamat <span class="opt">opsional</span></label><input class="fi" id="mAlamat" placeholder="Alamat singkat"></div>
       <div class="fg"><label>Poin awal</label><input class="fi" id="mPoin" type="number" min="0" value="0"></div>
+      <div class="fg" style="grid-column:span 2"><label>Alamat <span class="opt">opsional</span></label><input class="fi" id="mAlamat" placeholder="Alamat singkat"></div>
     </div>
+    <div style="font-size:11px;color:var(--ink-400);margin:2px 0 6px;line-height:1.6">💡 Cukup isi nama saja — ID Kartu RFID dibuat otomatis oleh sistem.</div>
     <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalMember')">Batal</button><button class="btn-ok" onclick="saveMember()">Simpan Member</button></div>
   </div>
 </div>
@@ -1426,6 +1464,48 @@ tr:hover td{background:#FAFBFF}
     </div>
     <div class="fg"><label>Catatan <span class="opt">opsional</span></label><input class="fi" id="pindahKet" placeholder="mis: Setor kas berlebih ke BRI"></div>
     <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPindah')">Batal</button><button class="btn-ok" onclick="prosesPindah()">Pindahkan</button></div>
+  </div>
+</div>
+
+<!-- MODAL PINJAMAN -->
+<div class="mo" id="modalPinjaman">
+  <div class="md" style="max-width:400px">
+    <div class="md-title">💳 Catat Pinjaman</div>
+    <p style="font-size:12.5px;color:var(--ink-500);margin-bottom:16px;line-height:1.6">Catat dana pinjaman yang masuk. Nominal pinjaman akan otomatis <b>menambah total saldo keseluruhan</b> sesuai tujuan dana yang dipilih.</p>
+    <div class="fg"><label>Dana Masuk Ke</label>
+      <select class="fi" id="pinjamKe">
+        <option value="KAS" selected>💵 Kas Tunai</option>
+        <option value="BRI">🔵 Saldo BRI</option>
+        <option value="TRF">🟢 Saldo Bank Transfer</option>
+      </select>
+    </div>
+    <div class="fg"><label>Nominal Pinjaman</label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="pinjamNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div class="fg"><label>Pemberi Pinjaman <span class="opt">opsional</span></label><input class="fi" id="pinjamPemberi" placeholder="mis: Bank BRI / Pak Budi"></div>
+    <div class="fg"><label>Catatan <span class="opt">opsional</span></label><input class="fi" id="pinjamKet" placeholder="mis: Pinjaman modal tambahan"></div>
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPinjaman')">Batal</button><button class="btn-ok" onclick="prosesPinjaman()">Simpan Pinjaman</button></div>
+  </div>
+</div>
+
+<!-- MODAL PELUNASAN PINJAMAN -->
+<div class="mo" id="modalLunasPinjam">
+  <div class="md" style="max-width:400px">
+    <div class="md-title">✅ Pelunasan Pinjaman</div>
+    <p style="font-size:12.5px;color:var(--ink-500);margin-bottom:16px;line-height:1.6" id="lunasInfo"></p>
+    <div class="fg"><label>Dana Pembayaran Diambil Dari</label>
+      <select class="fi" id="lunasDari">
+        <option value="KAS">💵 Kas Tunai</option>
+        <option value="BRI">🔵 Saldo BRI</option>
+        <option value="TRF">🟢 Saldo Bank Transfer</option>
+      </select>
+    </div>
+    <div class="fg"><label>Biaya Admin Pinjaman <span class="opt">opsional, ikut dipotong dari sisi pembayaran</span></label>
+      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="lunasAdmin" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-400);line-height:1.6;margin-bottom:4px">Setelah dikonfirmasi, <b>nominal pinjaman + biaya admin</b> otomatis dikurangi dari sisi yang dipilih — saldo kembali normal seperti sebelum pinjaman.</div>
+    <input type="hidden" id="lunasTs">
+    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalLunasPinjam')">Batal</button><button class="btn-ok" onclick="prosesLunasPinjam()">Konfirmasi Lunas</button></div>
   </div>
 </div>
 
@@ -1555,7 +1635,8 @@ function makeResizable(resizerId, panelSelector, minW, maxW){
   });
 }
 makeResizable('resizer', '.sb', 320, () => window.innerWidth * 0.78);
-makeResizable('railResizer', '.rail', 72, 340);
+// Rail resizer dinonaktifkan — sidebar sekarang berbentuk drawer (dibuka lewat tombol garis tiga)
+// makeResizable('railResizer', '.rail', 72, 340);
 </script>
 <script>
 // ══ CUSTOMER DISPLAY (layar transparansi member) ══════════════
@@ -1888,6 +1969,7 @@ function seedCloudFromLocal(){
       let kind=null;
       if(k.indexOf('bl_trx_'+session.user+'_')===0)kind='trx';
       else if(k.indexOf('bl_pindah_'+session.user+'_')===0)kind='pindah';
+      else if(k.indexOf('bl_pinjam_'+session.user+'_')===0)kind='pinjam';
       if(!kind)return;
       try{JSON.parse(localStorage.getItem(k)).forEach(r=>{if(r&&r.ts!=null&&!tombHas(kind,String(r.ts)))updates[kind+'/'+r.ts]=r})}catch(e){}
     });
@@ -1925,6 +2007,16 @@ function removeTrxRecordLocal(tgl,ts){
 function mergePindahRecord(p){
   if(!p||!p.tgl||!p.ts)return;
   const key='bl_pindah_'+session.user+'_'+p.tgl;
+  let arr=JSON.parse(localStorage.getItem(key)||'[]');
+  const idx=arr.findIndex(r=>r.ts===p.ts);
+  if(idx>=0)arr[idx]=p;else arr.push(p);
+  arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
+  localStorage.setItem(key,JSON.stringify(arr));
+  renderKas();
+}
+function mergePinjamRecord(p){
+  if(!p||!p.tgl||!p.ts)return;
+  const key='bl_pinjam_'+session.user+'_'+p.tgl;
   let arr=JSON.parse(localStorage.getItem(key)||'[]');
   const idx=arr.findIndex(r=>r.ts===p.ts);
   if(idx>=0)arr[idx]=p;else arr.push(p);
@@ -1976,6 +2068,8 @@ function startCloudSyncListener(){
   db.ref(base+'/trx').on('child_removed',snap=>{const v=snap.val();if(v)removeTrxRecordLocal(v.tgl,v.ts)});
   db.ref(base+'/pindah').on('child_added',snap=>mergePindahRecord(snap.val()));
   db.ref(base+'/pindah').on('child_changed',snap=>mergePindahRecord(snap.val()));
+  db.ref(base+'/pinjam').on('child_added',snap=>mergePinjamRecord(snap.val()));
+  db.ref(base+'/pinjam').on('child_changed',snap=>mergePinjamRecord(snap.val()));
   db.ref(base+'/members').on('child_added',snap=>mergeMemberRecord(snap.key,snap.val()));
   db.ref(base+'/members').on('child_changed',snap=>mergeMemberRecord(snap.key,snap.val()));
   db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
@@ -2014,6 +2108,7 @@ function tryStartCloudSync(onDone,tries){
     }
     if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
     if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
+    if(val.pinjam)Object.values(val.pinjam).forEach(mergePinjamRecord);
     if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
     if(val.audit)Object.values(val.audit).forEach(mergeAuditRecord);
     if(val.redeem)Object.values(val.redeem).forEach(mergeRedeemRecord);
@@ -2356,8 +2451,23 @@ function checkAutoBackup(){
 }
 
 // ══ PAGES ══════════════════════════════════════
+// ══ SIDEBAR DRAWER (garis tiga) ═════════════════
+function toggleRail(){
+  const r=document.getElementById('railDrawer');
+  if(r.classList.contains('open'))closeRail();else openRail();
+}
+function openRail(){
+  document.getElementById('railDrawer').classList.add('open');
+  document.getElementById('railBackdrop').classList.add('show');
+}
+function closeRail(){
+  document.getElementById('railDrawer').classList.remove('open');
+  document.getElementById('railBackdrop').classList.remove('show');
+}
+
 function showPage(p){
   if(p==='admin'&&(!session||session.role!=='admin')){toast('Halaman ini khusus untuk Admin','err');return}
+  closeRail();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(el=>el.classList.remove('active'));
   const key=p.charAt(0).toUpperCase()+p.slice(1);
@@ -2366,7 +2476,7 @@ function showPage(p){
   if(p==='member')renderMembers();
   if(p==='kas')renderKas();
   if(p==='laporan')renderLaporan();
-  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();}
+  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();renderFeeRules();}
 }
 
 // ══ MEMBER DB ══════════════════════════════════
@@ -2433,7 +2543,14 @@ function loadData(){
 function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data))}
 function getCounter(){return parseInt(localStorage.getItem(counterKey())||'0')}
 function setCounter(n){localStorage.setItem(counterKey(),String(n))}
-function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(getCounter()+1).padStart(3,'0')}
+// FIX: nomor transaksi dihitung langsung dari data yang ada (nomor tertinggi + 1),
+// bukan dari counter terpisah — supaya selalu pas walau ada sinkron cloud / hapus transaksi.
+function nextTrxNumber(){
+  let max=0;
+  data.forEach(r=>{const m=String(r.no||'').match(/(\d+)\s*$/);if(m){const n=parseInt(m[1],10);if(n>max)max=n}});
+  return max+1;
+}
+function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(nextTrxNumber()).padStart(3,'0')}
 
 // ══ AUDIT LOG ══════════════════════════════════
 function logAudit(aksi,detail){
@@ -2446,7 +2563,11 @@ function logAudit(aksi,detail){
 }
 
 // ══ SETTINGS (global, cross-branch) ════════════
-function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;return s}
+function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;
+  // Auto fee agen: aturan berjenjang berdasarkan nominal (bisa diedit di Panel Admin). max=0 artinya "di atas semua tingkat".
+  if(s.feeAutoOn===undefined)s.feeAutoOn=true;
+  if(!Array.isArray(s.feeRules)||!s.feeRules.length)s.feeRules=[{max:1000000,fee:5000},{max:5000000,fee:10000},{max:10000000,fee:15000},{max:0,fee:20000}];
+  return s}
 function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s));scheduleCloudState()}
 
 // ══ KAS FISIK & SALDO CHANNEL (BRI / Bank Transfer) ════════
@@ -2538,6 +2659,67 @@ function prosesPindah(){
   toast('✓ Pemindahan saldo berhasil dicatat','ok');
 }
 
+// ══ PINJAMAN (dana pinjaman masuk → otomatis menambah total saldo keseluruhan) ═
+function pinjamKey(){return'bl_pinjam_'+session.user+'_'+todayISO()}
+function getPinjamList(){const r=localStorage.getItem(pinjamKey());return r?JSON.parse(r):[]}
+function savePinjamList(a){localStorage.setItem(pinjamKey(),JSON.stringify(a))}
+function scanAllPinjamForUser(){
+  const prefix='bl_pinjam_'+session.user+'_';
+  const rows=[];
+  Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
+  });
+  return rows;
+}
+function openPinjaman(){
+  document.getElementById('pinjamKe').value='KAS';
+  document.getElementById('pinjamNominal').value='';
+  document.getElementById('pinjamPemberi').value='';
+  document.getElementById('pinjamKet').value='';
+  openModal('modalPinjaman');
+}
+function prosesPinjaman(){
+  const ke=document.getElementById('pinjamKe').value;
+  const nominal=parseInt((document.getElementById('pinjamNominal').value||'0').replace(/\D/g,''))||0;
+  const pemberi=document.getElementById('pinjamPemberi').value.trim();
+  const ket=document.getElementById('pinjamKet').value.trim();
+  if(!nominal||nominal<=0){toast('Masukkan nominal pinjaman yang valid','err');return}
+  const list=getPinjamList();
+  const record={id:'PJ-'+Date.now(),tgl:todayISO(),waktu:nowTime(),ts:Date.now(),ke,nominal,pemberi,ket,oleh:session.nama};
+  list.push(record);
+  savePinjamList(list);
+  pushCloudRecord('pinjam',record.ts,record);
+  logAudit('PINJAMAN',fmtRp(nominal)+' masuk ke '+labelSisi(ke)+(pemberi?' dari '+pemberi:'')+(ket?' · '+ket:''));
+  closeModal('modalPinjaman');renderKas();
+  toast('✓ Pinjaman '+fmtRp(nominal)+' tercatat, saldo bertambah','ok');
+}
+function openLunasPinjam(ts){
+  const p=getPinjamList().find(r=>r.ts===ts);
+  if(!p){toast('Data pinjaman tidak ditemukan','err');return}
+  if(p.lunas){toast('Pinjaman ini sudah lunas','err');return}
+  document.getElementById('lunasInfo').innerHTML='Pinjaman <b>'+fmtRp(p.nominal)+'</b>'+(p.pemberi?' dari <b>'+p.pemberi+'</b>':'')+' (masuk ke '+labelSisi(p.ke)+') akan ditandai sudah dibayar / dikembalikan.';
+  document.getElementById('lunasDari').value=p.ke; // default: bayar dari sisi tempat dana masuk
+  document.getElementById('lunasAdmin').value='';
+  document.getElementById('lunasTs').value=String(ts);
+  openModal('modalLunasPinjam');
+}
+function prosesLunasPinjam(){
+  const ts=parseInt(document.getElementById('lunasTs').value)||0;
+  const dari=document.getElementById('lunasDari').value;
+  const list=getPinjamList();
+  const idx=list.findIndex(r=>r.ts===ts);
+  if(idx<0){toast('Data pinjaman tidak ditemukan','err');return}
+  const p=list[idx];
+  if(p.lunas){toast('Pinjaman ini sudah lunas','err');return}
+  const lunasAdmin=parseInt((document.getElementById('lunasAdmin').value||'0').replace(/\D/g,''))||0;
+  p.lunas=true;p.lunasTs=Date.now();p.lunasDari=dari;p.lunasAdmin=lunasAdmin;p.lunasWaktu=nowTime();p.lunasOleh=session.nama;
+  list[idx]=p;savePinjamList(list);
+  pushCloudRecord('pinjam',p.ts,p);
+  logAudit('PELUNASAN_PINJAMAN','Pinjaman '+fmtRp(p.nominal)+(p.pemberi?' dari '+p.pemberi:'')+' dilunasi — dana dibayar dari '+labelSisi(dari)+(lunasAdmin?' (biaya admin '+fmtRp(lunasAdmin)+')':''));
+  closeModal('modalLunasPinjam');renderKas();
+  toast('✓ Pinjaman lunas, saldo kembali normal','ok');
+}
+
 function hitungKas(excludeTs){
   const kasAwal=getKasFisikAwal();
   const kasResetAt=getKasResetAt();
@@ -2590,6 +2772,22 @@ function hitungKas(excludeTs){
     if(p.ke==='KAS'){if(ts>kasResetAt)kasPlus+=p.nominal;}
     else if(saldo[p.ke]&&ts>saldoResetAt[p.ke])saldo[p.ke].plus+=p.nominal;
   });
+
+  // Pinjaman: dana pinjaman masuk → menambah sisi tujuan, sehingga total saldo keseluruhan ikut bertambah.
+  // Kalau sudah LUNAS: nominal dikurangi kembali dari sisi pembayaran → saldo kembali normal.
+  scanAllPinjamForUser().forEach(p=>{
+    if(excludeTs&&p.ts===excludeTs)return;
+    const ts=p.ts||1;
+    if(p.ke==='KAS'){if(ts>kasResetAt)kasPlus+=p.nominal;}
+    else if(saldo[p.ke]&&ts>saldoResetAt[p.ke])saldo[p.ke].plus+=p.nominal;
+    if(p.lunas){
+      const lts=p.lunasTs||ts;
+      const src=p.lunasDari||p.ke;
+      const bayar=p.nominal+(p.lunasAdmin||0); // nominal + biaya admin pinjaman
+      if(src==='KAS'){if(lts>kasResetAt)kasMinus+=bayar;}
+      else if(saldo[src]&&lts>saldoResetAt[src])saldo[src].minus+=bayar;
+    }
+  });
   CHANNELS.forEach(ch=>{saldo[ch].akhir=saldo[ch].awal+saldo[ch].plus-saldo[ch].minus});
   const kasAkhir=kasAwal+kasPlus-kasMinus;
   let totalSaldoKeseluruhan=kasAkhir;
@@ -2636,6 +2834,25 @@ function renderKas(){
       </div>
       <div class="hist-r"><div class="hist-nom">${fmtRp(p.nominal)}</div></div>
     </div>`).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">🔁</span>Belum ada pemindahan saldo hari ini</div>';
+  }
+
+  const pinjamList=getPinjamList().slice().reverse();
+  const pinjamEl=document.getElementById('pinjamHistList');
+  if(pinjamEl){
+    pinjamEl.innerHTML=pinjamList.length?pinjamList.map(p=>`<div class="hist-row">
+      <div class="hist-ic">${p.lunas?'✅':'💳'}</div>
+      <div class="hist-l">
+        <div class="hist-no">${p.waktu} · ${p.oleh}</div>
+        <div class="hist-jns">Pinjaman → ${labelSisi(p.ke)} ${p.lunas?'<span style="background:var(--emerald-lt,#d1fae5);color:var(--emerald-600,#059669);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.05em">LUNAS</span>':''}</div>
+        ${p.pemberi?`<div class="hist-tgl">Dari: ${p.pemberi}</div>`:''}
+        ${p.ket?`<div class="hist-tgl">${p.ket}</div>`:''}
+        ${p.lunas?`<div class="hist-tgl">Dilunasi ${p.lunasWaktu||''} oleh ${p.lunasOleh||'-'} · dibayar dari ${labelSisi(p.lunasDari||p.ke)}${p.lunasAdmin?' · biaya admin '+fmtRp(p.lunasAdmin):''}</div>`:''}
+      </div>
+      <div class="hist-r">
+        <div class="hist-nom" style="color:${p.lunas?'var(--ink-400)':'var(--emerald-600)'}">${p.lunas?'':'+ '}${fmtRp(p.nominal)}</div>
+        ${p.lunas?'':`<button class="btn-primary" style="padding:5px 10px;font-size:10.5px;margin-top:5px" onclick="openLunasPinjam(${p.ts})">✓ Sudah Dibayar</button>`}
+      </div>
+    </div>`).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">💳</span>Belum ada pinjaman hari ini</div>';
   }
 }
 function openPindahSaldo(){
@@ -2701,6 +2918,31 @@ setInterval(tick,1000);
 function fmtMoney(inp){
   const raw=inp.value.replace(/\D/g,'');
   inp.value=raw?parseInt(raw,10).toLocaleString('id-ID'):'';
+  updatePreview();
+}
+
+// ══ AUTO FEE AGEN ══════════════════════════════
+// Hitung fee agen otomatis dari aturan berjenjang di pengaturan (bisa diedit Admin).
+function calcAutoFee(nominal){
+  const s=getSettings();
+  if(!s.feeAutoOn||!nominal||nominal<=0)return null;
+  const rules=(s.feeRules||[]).slice().sort((a,b)=>{
+    const am=a.max||0,bm=b.max||0;
+    if(am===0)return 1;if(bm===0)return -1;return am-bm; // max=0 (tanpa batas) selalu terakhir
+  });
+  for(const r of rules){
+    if(r.max===0||nominal<=r.max)return r.fee||0;
+  }
+  return null;
+}
+// Dipanggil setiap kasir mengetik nominal transaksi → kolom Fee Agen langsung terisi otomatis.
+// Kasir tetap bisa mengubah fee secara manual setelahnya kalau perlu.
+function autoFeeFromNominal(){
+  const nom=parseMoney('fNominal');
+  const fee=calcAutoFee(nom);
+  const el=document.getElementById('fFee');
+  if(fee===null){if(!nom)el.value='';updatePreview();return}
+  el.value=fee?fee.toLocaleString('id-ID'):'';
   updatePreview();
 }
 function parseMoney(inp){return parseInt((document.getElementById(inp).value||'0').replace(/\./g,'').replace(/,/g,''))||0}
@@ -2964,7 +3206,7 @@ function commitTransaksi(payload){
   }
 
   // ═ CREATE MODE ═
-  const ctr=getCounter()+1;setCounter(ctr);
+  const ctr=nextTrxNumber();setCounter(ctr);
   const noTrx='TRX-'+String(ctr).padStart(3,'0');
   const poin=currentRfid?calcPts(nominal):0;
   const trx={
@@ -3069,7 +3311,7 @@ function render(){
   }
   document.getElementById('tblCount').textContent=filtered.length+' transaksi';
   document.getElementById('trxPager').innerHTML=renderPagerHtml(trxPage,totalPages,'goTrxPage');
-  renderStats(filtered);
+  updateNoTrx(); // selalu segarkan nomor transaksi berikutnya sesuai data terkini
 }
 function hapus(idx){
   const r=data[idx];if(!r)return;
@@ -3091,16 +3333,6 @@ function hapus(idx){
   data.splice(idx,1);saveData();tombstoneAndRemoveCloud('trx',r.ts,{tgl:r.tgl});render();renderKas();toast('Transaksi dihapus')
 }
 
-function renderStats(filtered){
-  const totNom=filtered.reduce((a,r)=>a+r.nominal,0);
-  const totAdm=filtered.reduce((a,r)=>a+r.admin,0);
-  const totFee=filtered.reduce((a,r)=>a+r.fee,0);
-  document.getElementById('statsRow').innerHTML=`
-    <div class="sc blue"><div class="sc-inner"><div><div class="sc-lbl">Total transaksi</div><div class="sc-num">${filtered.length}</div><div class="sc-sub">tersimpan</div></div><div class="sc-icon" style="background:var(--blue-lt)">🧾</div></div></div>
-    <div class="sc green"><div class="sc-inner"><div><div class="sc-lbl">Total nominal</div><div class="sc-num" style="font-size:17px">${fmtRp(totNom)}</div><div class="sc-sub">nilai transaksi</div></div><div class="sc-icon" style="background:var(--emerald-lt)">💰</div></div></div>
-    <div class="sc amber"><div class="sc-inner"><div><div class="sc-lbl">Total biaya admin</div><div class="sc-num" style="font-size:17px">${fmtRp(totAdm)}</div><div class="sc-sub">dari customer</div></div><div class="sc-icon" style="background:var(--amber-lt)">📋</div></div></div>
-    <div class="sc purple"><div class="sc-inner"><div><div class="sc-lbl">Total fee agen</div><div class="sc-num" style="font-size:17px;color:var(--emerald-600)">${fmtRp(totFee)}</div><div class="sc-sub">keuntungan agen</div></div><div class="sc-icon" style="background:var(--violet-lt)">✅</div></div></div>`;
-}
 
 // ══ MEMBER CRUD ═════════════════════════════════
 function openAddMember(){
@@ -3116,8 +3348,8 @@ function openEditMember(id){
   document.getElementById('modalMemberTitle').textContent='Edit Data Member';
   document.getElementById('editMemberId').value=id;
   document.getElementById('mNama').value=m.nama;
-  document.getElementById('mHp').value=m.hp;
-  document.getElementById('mRfid').value=m.rfid;
+  document.getElementById('mHp').value=m.hp||'';
+  document.getElementById('mRfid').value=m.rfid||genRfid();
   document.getElementById('mTglLahir').value=m.tglLahir||'';
   document.getElementById('mAlamat').value=m.alamat||'';
   document.getElementById('mPoin').value=m.poin||0;
@@ -3126,16 +3358,16 @@ function openEditMember(id){
 function saveMember(){
   const nama=document.getElementById('mNama').value.trim();
   const hp=document.getElementById('mHp').value.trim();
-  const rfid=document.getElementById('mRfid').value.trim();
+  let rfid=document.getElementById('mRfid').value.trim();
   const poin=parseInt(document.getElementById('mPoin').value)||0;
   if(!nama){toast('Nama tidak boleh kosong','err');return}
-  if(!hp){toast('No. HP tidak boleh kosong','err');return}
-  if(!/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
-  if(!rfid){toast('ID Kartu RFID tidak boleh kosong','err');return}
+  // No. HP tidak wajib — hanya divalidasi kalau memang diisi
+  if(hp&&!/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
+  if(!rfid){rfid=genRfid();document.getElementById('mRfid').value=rfid} // ID Kartu dibuat otomatis
   const members=getMembers();
   const editId=document.getElementById('editMemberId').value;
   if(members.find(m=>m.rfid===rfid&&m.id!==editId)){toast('ID Kartu sudah digunakan member lain','err');return}
-  if(members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
+  if(hp&&members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
   let savedId=editId;
   if(editId){
     const idx=members.findIndex(m=>m.id===editId);
@@ -3466,6 +3698,50 @@ function saveLimitSetting(){
   const s=getSettings();s.limitTarikTunai=vTarik;s.limitTransfer=vTransfer;saveSettings(s);
   logAudit('UBAH_PENGATURAN','Limit per transaksi diubah — Tarik Tunai: '+fmtRp(vTarik)+', Transfer: '+fmtRp(vTransfer));
   toast('✓ Pengaturan disimpan','ok');renderKas();
+}
+
+// ══ ADMIN — ATURAN AUTO FEE AGEN ═══════════════
+function renderFeeRules(){
+  const s=getSettings();
+  const cb=document.getElementById('feeAutoOn');if(cb)cb.checked=!!s.feeAutoOn;
+  const body=document.getElementById('feeRulesBody');if(!body)return;
+  body.innerHTML=(s.feeRules||[]).map((r,i)=>`<tr>
+    <td><div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp fee-rule-max" placeholder="tanpa batas" inputmode="numeric" value="${r.max?r.max.toLocaleString('id-ID'):''}" oninput="fmtMoney2(this)"></div></td>
+    <td><div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp fee-rule-fee" placeholder="0" inputmode="numeric" value="${r.fee?r.fee.toLocaleString('id-ID'):''}" oninput="fmtMoney2(this)"></div></td>
+    <td><button class="del" onclick="delFeeRule(${i})" title="Hapus tingkat">✕</button></td>
+  </tr>`).join('');
+}
+function collectFeeRulesFromUI(){
+  const rows=[];
+  const maxes=document.querySelectorAll('.fee-rule-max');
+  const fees=document.querySelectorAll('.fee-rule-fee');
+  maxes.forEach((m,i)=>{
+    const max=parseInt((m.value||'0').replace(/\D/g,''))||0;
+    const fee=parseInt((fees[i].value||'0').replace(/\D/g,''))||0;
+    rows.push({max,fee});
+  });
+  return rows;
+}
+function addFeeRule(){
+  const s=getSettings();
+  s.feeRules=collectFeeRulesFromUI();
+  s.feeRules.push({max:0,fee:0});
+  saveSettings(s);renderFeeRules();
+}
+function delFeeRule(i){
+  const s=getSettings();
+  const rules=collectFeeRulesFromUI();
+  rules.splice(i,1);
+  s.feeRules=rules;
+  saveSettings(s);renderFeeRules();
+}
+function saveFeeRules(fromToggle){
+  const s=getSettings();
+  s.feeAutoOn=document.getElementById('feeAutoOn').checked;
+  s.feeRules=collectFeeRulesFromUI();
+  saveSettings(s);
+  logAudit('UBAH_PENGATURAN','Aturan auto fee agen diubah — '+(s.feeAutoOn?'AKTIF':'NONAKTIF')+' · '+s.feeRules.map(r=>(r.max?('≤'+fmtRp(r.max)):'di atasnya')+'→'+fmtRp(r.fee)).join(', '));
+  toast(fromToggle?('Auto fee agen '+(s.feeAutoOn?'diaktifkan':'dinonaktifkan')):'✓ Aturan fee agen disimpan','ok');
 }
 
 // ══ ADMIN — AUDIT LOG ═══════════════════════════
