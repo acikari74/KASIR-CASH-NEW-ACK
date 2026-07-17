@@ -784,8 +784,8 @@ tr:hover td{background:#FAFBFF}
                 <div class="rfid-default" id="rfidDefault">
                   <div class="rfid-default-icon">📡</div>
                   <div class="rfid-default-text">
-                    <div class="t1">Tap / ketik ID kartu member</div>
-                    <div class="t2">Klik di sini untuk mencari member</div>
+                    <div class="t1">Cari member</div>
+                    <div class="t2">Klik di sini, lalu ketik nama atau No. HP customer</div>
                   </div>
                 </div>
                 <div id="rfidFound" style="display:none">
@@ -800,9 +800,10 @@ tr:hover td{background:#FAFBFF}
                   <button class="rfid-clear" onclick="clearRfid(event)">✕</button>
                 </div>
                 <div class="rfid-search-row" id="rfidSearchRow" style="display:none" onclick="event.stopPropagation()">
-                  <input id="rfidQ" placeholder="ID kartu atau No. HP member" onkeydown="if(event.key==='Enter')searchRfid()">
+                  <input id="rfidQ" placeholder="Nama atau No. HP customer" oninput="searchRfidLive()" onkeydown="if(event.key==='Enter')searchRfid()">
                   <button onclick="searchRfid()">Cari</button>
                 </div>
+                <div id="rfidResults" style="display:none;flex-direction:column;gap:6px;margin-top:8px" onclick="event.stopPropagation()"></div>
               </div>
 
               <!-- JENIS -->
@@ -1229,7 +1230,7 @@ tr:hover td{background:#FAFBFF}
           <div class="tier-promo" id="tierPromoContainer"></div>
 
           <div class="msearch">
-            <div class="fg-f"><label>Cari nama / HP / ID kartu</label><input id="mSearch" placeholder="Ketik untuk mencari..." oninput="memberFilterChanged()"></div>
+            <div class="fg-f"><label>Cari Nama / No. HP Customer</label><input id="mSearch" placeholder="Ketik nama atau nomor HP..." oninput="memberFilterChanged()"></div>
             <div class="fg-f"><label>Tier</label><select id="mTier" onchange="memberFilterChanged()"><option value="">Semua tier</option><option>Regular</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></div>
             <button class="btn-clr" onclick="clearMemberFilter()">✕ Reset</button>
             <button class="btn-export" onclick="exportMemberExcel()">⬇ Export Excel</button>
@@ -1365,8 +1366,8 @@ tr:hover td{background:#FAFBFF}
     <div class="md-title"><span>💳</span><span id="modalMemberTitle">Tambah Member Baru</span></div>
     <input type="hidden" id="editMemberId">
     <div class="mgrid">
-      <div class="fg" style="grid-column:span 2"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
-      <div class="fg" style="display:none"><label>No. HP</label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
+      <div class="fg"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
+      <div class="fg"><label>No. HP <span class="opt">opsional, untuk pencarian</span></label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
       <div class="fg" style="display:none"><label>ID Kartu RFID</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
       <div class="fg"><label>Tanggal lahir <span class="opt">opsional</span></label><input class="fi" id="mTglLahir" type="date"></div>
       <div class="fg"><label>Poin awal</label><input class="fi" id="mPoin" type="number" min="0" value="0"></div>
@@ -3003,12 +3004,46 @@ function toggleRfidInput(){
   row.style.display=row.style.display==='none'?'flex':'none';
   if(row.style.display==='flex')setTimeout(()=>document.getElementById('rfidQ').focus(),50);
 }
+function findMembersByQuery(q){
+  const ql=q.toLowerCase();
+  return getMembers().filter(m=>
+    (m.rfid&&m.rfid.toLowerCase()===ql)||
+    (m.hp&&m.hp.replace(/\D/g,'').includes(q.replace(/\D/g,''))&&q.replace(/\D/g,'').length>=3)||
+    (m.nama&&m.nama.toLowerCase().includes(ql))
+  );
+}
+function renderRfidResults(matches){
+  const box=document.getElementById('rfidResults');
+  if(!matches.length){box.style.display='none';box.innerHTML='';return}
+  box.style.display='flex';
+  box.innerHTML=matches.slice(0,6).map(m=>{
+    const tier=getTier(m.poin);
+    return`<div onclick="pickMemberFromSearch('${m.id}')" style="background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:9px 11px;display:flex;align-items:center;gap:9px;cursor:pointer" onmouseover="this.style.borderColor='var(--violet-500)'" onmouseout="this.style.borderColor='var(--ink-200)'">
+      <div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--violet-600),var(--violet-500));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${(m.nama||'?').charAt(0).toUpperCase()}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12.5px;color:var(--ink-950);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.nama}</div><div style="font-size:10px;color:var(--ink-400)">${m.hp||'tanpa No. HP'} · ⭐ ${m.poin||0} · ${tier}</div></div>
+    </div>`;
+  }).join('')+(matches.length>6?`<div style="font-size:10.5px;color:var(--ink-400);text-align:center">+${matches.length-6} member lain — perjelas kata kunci</div>`:'');
+}
+function searchRfidLive(){
+  const q=document.getElementById('rfidQ').value.trim();
+  if(q.length<2){renderRfidResults([]);return}
+  renderRfidResults(findMembersByQuery(q));
+}
+function pickMemberFromSearch(id){
+  const m=getMembers().find(x=>x.id===id);
+  if(!m)return;
+  applyRfid(m);
+  document.getElementById('rfidQ').value='';
+  renderRfidResults([]);
+}
 function searchRfid(){
   const q=document.getElementById('rfidQ').value.trim();
   if(!q)return;
-  const m=getMemberByRfid(q)||getMemberByHp(q);
-  if(m){applyRfid(m);document.getElementById('rfidQ').value='';}
-  else{toast('Member tidak ditemukan dalam database','err');}
+  const matches=findMembersByQuery(q);
+  if(!matches.length){toast('Member tidak ditemukan — coba nama atau No. HP lain','err');renderRfidResults([]);return}
+  if(matches.length===1){pickMemberFromSearch(matches[0].id);return}
+  renderRfidResults(matches);
+  toast('Ditemukan '+matches.length+' member, pilih salah satu','ok');
 }
 function applyRfid(m){
   currentRfid=m;
@@ -3016,6 +3051,7 @@ function applyRfid(m){
   z.classList.remove('scanning');z.classList.add('found');
   document.getElementById('rfidDefault').style.display='none';
   document.getElementById('rfidSearchRow').style.display='none';
+  const rr=document.getElementById('rfidResults');if(rr){rr.style.display='none';rr.innerHTML='';}
   const found=document.getElementById('rfidFound');found.style.display='block';
   document.getElementById('rfidAv').textContent=m.nama.charAt(0).toUpperCase();
   document.getElementById('rfidName').textContent=m.nama;
@@ -3032,6 +3068,7 @@ function clearRfid(e){
   const z=document.getElementById('rfidZone');
   z.classList.remove('found','scanning');
   document.getElementById('rfidDefault').style.display='flex';
+  const rr2=document.getElementById('rfidResults');if(rr2){rr2.style.display='none';rr2.innerHTML='';}
   document.getElementById('rfidFound').style.display='none';
   document.getElementById('rfidSearchRow').style.display='none';
   document.getElementById('fNama').value='';document.getElementById('fHP').value='';
@@ -3475,7 +3512,7 @@ function renderMembers(){
   const q=(document.getElementById('mSearch').value||'').toLowerCase();
   const tf=document.getElementById('mTier').value;
   let members=getMembers();
-  if(q)members=members.filter(m=>m.nama.toLowerCase().includes(q)||m.hp.includes(q)||m.rfid.toLowerCase().includes(q));
+  if(q)members=members.filter(m=>(m.nama||'').toLowerCase().includes(q)||(m.hp||'').includes(q));
   if(tf)members=members.filter(m=>getTier(m.poin)===tf);
   const grid=document.getElementById('memberGrid');
   if(!members.length){
@@ -3505,7 +3542,7 @@ function renderMembers(){
         </div>
       </div>
       <div class="mc-body">
-        <div class="mc-row"><span class="mc-rl">No. HP</span><span class="mc-rv">${m.hp}</span></div>
+        <div class="mc-row"><span class="mc-rl">No. HP</span><span class="mc-rv">${m.hp||'—'}</span></div>
         <div class="mc-row"><span class="mc-rl">ID Kartu</span><span class="mc-rv"><span class="rfid-pill">${m.rfid}</span></span></div>
         <div class="mc-row"><span class="mc-rl">Total poin</span><span class="mc-rv pts">⭐ ${(m.poin||0).toLocaleString('id-ID')}</span></div>
         <div class="mc-row"><span class="mc-rl">Hadiah tier ini</span><span class="mc-rv" style="color:var(--gold-600)">🎁 ${tierRewardText(tier)}</span></div>
