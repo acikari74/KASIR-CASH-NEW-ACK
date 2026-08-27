@@ -1077,11 +1077,11 @@ tr:hover td{background:#FAFBFF}
           </div>
 
           <div class="filter-card" style="margin-bottom:20px">
-            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer (opsional)</div>
-            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, data (transaksi, member, kas/saldo, dll) tersimpan <b>di masing-masing komputer sendiri-sendiri</b> — tidak nyambung satu sama lain. Aktifkan Firebase di bawah ini untuk 2 manfaat sekaligus (gratis, butuh internet):<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah, bukan cuma jendela kedua di komputer yang sama.</div>
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">✅ <b>Otomatis aktif — tidak perlu setup apapun.</b> Config Firebase sudah tertanam di dalam aplikasi ini, jadi device baru manapun (komputer/tablet lain) yang membuka aplikasi ini <b>langsung tersinkron otomatis</b> begitu login, tanpa perlu tempel config atau buka link setup segala. Manfaatnya:<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa langsung dipakai di tablet/HP terpisah — cukup scan QR di bawah.<br><br>Bagian di bawah ini (bikin akun Firebase sendiri, tempel config manual) <b>tidak wajib dibuka</b> — cuma untuk situasi khusus kalau suatu saat kamu perlu pindah ke project Firebase yang berbeda.</div>
 
             <details style="margin-bottom:14px">
-              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 Cara bikin akun Firebase gratis (sekali saja, ± 5 menit, semua klik-klik saja)</summary>
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 (Opsional/lanjutan) Cara bikin akun Firebase sendiri kalau perlu ganti project</summary>
               <ol style="margin:12px 0 4px 18px;padding:0;font-size:12px;color:var(--ink-600);line-height:2">
                 <li>Buka <b>console.firebase.google.com</b>, login pakai akun Google (boleh pakai acikari74@gmail.com).</li>
                 <li>Klik <b>"Add project"</b> / "Tambah project" → kasih nama bebas misal "BRILink" → lanjut terus sampai selesai (boleh matikan Google Analytics, tidak perlu).</li>
@@ -1113,13 +1113,14 @@ tr:hover td{background:#FAFBFF}
               <p style="margin:8px 0 0;font-size:11px;color:var(--ink-400)">Klik "Publish" setelah diganti. Ini <b>gratis</b> — indexOn bukan fitur berbayar, cuma petunjuk susunan data biasa yang tersedia di paket gratis Firebase (Spark). Data lama tetap aman tersimpan permanen di cloud, cuma tidak diunduh ulang tiap login.</p>
             </details>
 
+            <div id="fbConfigStatusBadge" style="font-size:11px;font-weight:700;margin-bottom:8px;display:inline-block;padding:4px 10px;border-radius:20px"></div>
             <div class="fg">
-              <label>Tempel Firebase Config di sini</label>
+              <label>Config Firebase yang sedang dipakai (edit &amp; simpan kalau mau pakai project kustom)</label>
               <textarea class="fi" id="fbConfigInput" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","...":"..."}' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:6px">
-              <button class="btn-primary" onclick="saveFirebaseConfigUI()">💾 Simpan Konfigurasi</button>
-              <button class="btn-clr" onclick="removeFirebaseConfigUI()">🗑 Hapus Konfigurasi</button>
+              <button class="btn-primary" onclick="saveFirebaseConfigUI()">💾 Simpan sebagai Config Kustom</button>
+              <button class="btn-clr" onclick="removeFirebaseConfigUI()">↩️ Kembali ke Config Bawaan</button>
             </div>
 
             <div id="fbLinkSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--ink-100)">
@@ -1137,8 +1138,8 @@ tr:hover td{background:#FAFBFF}
               </div>
 
               <div style="margin-top:20px;padding-top:16px;border-top:1px dashed var(--ink-200)">
-                <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:6px">🔗 Aktifkan Sinkron Data di Komputer/Tablet Lain</div>
-                <div style="font-size:11.5px;color:var(--ink-500);margin-bottom:10px;line-height:1.7">Config Firebase tersimpan sendiri-sendiri di tiap device — device lain <b>belum otomatis tahu</b> config ini, meski akunnya sama-sama cabang1 dsb. Buka/scan link di bawah <b>SEKALI SAJA</b> di device lain itu (boleh pakai akun kasir biasa, tidak perlu admin) — setelah itu sinkron otomatis aktif di situ selamanya, tidak perlu diulang.</div>
+                <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:6px">🔗 (Jarang dipakai) Kirim Config Kustom ke Device Lain</div>
+                <div style="font-size:11.5px;color:var(--ink-500);margin-bottom:10px;line-height:1.7">Sinkronisasi sudah <b>otomatis aktif di semua device</b> begitu buka aplikasi ini, jadi bagian ini biasanya tidak perlu disentuh. Link/QR ini cuma berguna kalau kamu mengganti config Firebase di atas jadi project <b>kustom yang berbeda</b> dari bawaan, dan ingin device lain ikut memakai config kustom itu juga.</div>
                 <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
                   <img id="fbSetupQr" src="" alt="QR Setup Device" style="width:130px;height:130px;border-radius:12px;border:1px solid var(--ink-200)">
                   <div style="flex:1;min-width:220px">
@@ -1760,8 +1761,29 @@ function cdSuccessState(memberNama,poinBaru,totalPoin){
 // Supaya bisa dipakai di tablet/HP terpisah sebagai layar customer sungguhan, kita pakai
 // Firebase Realtime Database (gratis) sebagai "jembatan" lewat internet. Ini sepenuhnya
 // OPSIONAL — kalau belum di-setup, aplikasi tetap jalan normal pakai mode 1-komputer di atas.
+// Config Firebase "ditanam" langsung di sini — supaya device BARU MANAPUN yang membuka
+// aplikasi ini (lewat file/link yang sama) otomatis langsung tersinkron ke cloud, tanpa
+// perlu tempel config atau buka link setup apapun sama sekali. Kalau nanti project Firebase
+// perlu diganti, cukup update nilai di sini SEKALI (atau tetap bisa dioverride manual per-device
+// lewat Panel Admin kalau memang perlu situasi khusus).
+const DEFAULT_FIREBASE_CONFIG={
+  apiKey:"AIzaSyBF2qbIMN29x92gDYBGjCvdaxCKJsNOuU8",
+  authDomain:"kasiracik.firebaseapp.com",
+  databaseURL:"https://kasiracik-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"kasiracik",
+  storageBucket:"kasiracik.firebasestorage.app",
+  messagingSenderId:"529933713134",
+  appId:"1:529933713134:web:899349c159c4b69502bdff",
+  measurementId:"G-VVGTLKDNZ9"
+};
 function fbConfigKey(){return'bl_firebase_config'}
-function getFirebaseConfig(){try{const r=localStorage.getItem(fbConfigKey());return r?JSON.parse(r):null}catch(e){return null}}
+function getFirebaseConfig(){
+  try{
+    const r=localStorage.getItem(fbConfigKey());
+    if(r)return JSON.parse(r); // override manual (kalau pernah disimpan) selalu diutamakan
+  }catch(e){}
+  return DEFAULT_FIREBASE_CONFIG; // device baru: langsung pakai ini, tidak perlu setup apapun
+}
 function setFirebaseConfig(cfg){localStorage.setItem(fbConfigKey(),JSON.stringify(cfg))}
 function clearFirebaseConfig(){localStorage.removeItem(fbConfigKey())}
 let fbApp=null,fbDb=null;
@@ -3591,7 +3613,14 @@ function renderFirebaseSyncUI(){
   const cfg=getFirebaseConfig();
   const input=document.getElementById('fbConfigInput');
   const section=document.getElementById('fbLinkSection');
+  const badge=document.getElementById('fbConfigStatusBadge');
   if(!input||!section)return;
+  const isCustom=!!localStorage.getItem(fbConfigKey());
+  if(badge){
+    badge.textContent=isCustom?'🔧 Memakai config KUSTOM':'✅ Memakai config BAWAAN (otomatis, tidak perlu diubah)';
+    badge.style.background=isCustom?'var(--amber-lt)':'var(--emerald-lt)';
+    badge.style.color=isCustom?'var(--amber-600)':'var(--emerald-700)';
+  }
   if(cfg){
     input.value=JSON.stringify(cfg,null,2);
     section.style.display='block';
@@ -3624,13 +3653,13 @@ function saveFirebaseConfigUI(){
   toast('✓ Konfigurasi tersimpan — Layar Customer siap dipakai di device terpisah','ok');
 }
 function removeFirebaseConfigUI(){
-  if(!confirm('Hapus konfigurasi sinkronisasi jarak jauh? Layar customer di tablet/HP akan berhenti tersambung.'))return;
+  if(!confirm('Hapus config kustom ini dan kembali ke config bawaan aplikasi? Sinkronisasi akan tetap aktif seperti biasa (pakai config bawaan), ini cuma menghapus pengaturan kustom yang pernah kamu simpan.'))return;
   clearFirebaseConfig();
   fbApp=null;fbDb=null;
   document.getElementById('fbConfigInput').value='';
   renderFirebaseSyncUI();
-  logAudit('HAPUS_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh dinonaktifkan oleh '+session.nama);
-  toast('Konfigurasi dihapus','ok');
+  logAudit('HAPUS_FIREBASE_CONFIG_KUSTOM','Config Firebase kustom dihapus, kembali ke config bawaan, oleh '+session.nama);
+  toast('✓ Kembali ke config bawaan — sinkronisasi tetap aktif','ok');
 }
 function copyRemoteUrl(){
   const url=document.getElementById('fbRemoteUrl').textContent;
