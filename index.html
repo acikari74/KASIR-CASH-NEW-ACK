@@ -1092,17 +1092,25 @@ tr:hover td{background:#FAFBFF}
               </ol>
             </details>
 
-            <details style="margin-bottom:14px">
-              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--rose-600)">⚠️ Sudah pernah setup Firebase sebelumnya? Wajib update Rules-nya dulu</summary>
-              <p style="margin:12px 0 8px;font-size:12px;color:var(--ink-600);line-height:1.8">Fitur sinkronisasi data ini pakai "alamat" baru di database (<span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">brilink_sync</span>) selain yang lama (<span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">brilink_customer</span>). Buka Firebase Console → Realtime Database → tab <b>Rules</b> → ganti isinya jadi:</p>
+            <details style="margin-bottom:14px" open>
+              <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--rose-600)">⚠️ WAJIB update Rules sekarang (perbaikan biar login tidak lambat lagi)</summary>
+              <p style="margin:12px 0 8px;font-size:12px;color:var(--ink-600);line-height:1.8">Supaya login tidak lagi menarik <b>seluruh riwayat</b> tiap kali (yang bikin lambat/berat kalau datanya sudah banyak), aplikasi sekarang cuma minta data 90 hari terakhir — dan supaya Firebase bisa memprosesnya dengan cepat, database perlu diberi tahu untuk "mengindeks" berdasarkan waktu. Buka Firebase Console → Realtime Database → tab <b>Rules</b> → ganti isinya jadi:</p>
               <pre style="background:var(--paper-50);border:1px solid var(--ink-200);border-radius:8px;padding:12px;font-size:11px;font-family:var(--mono);overflow-x:auto;white-space:pre">{
   "rules": {
     "brilink_customer": { ".read": true, ".write": true },
-    "brilink_sync": { ".read": true, ".write": true },
+    "brilink_sync": {
+      "$user": {
+        "trx": { ".indexOn": "ts" },
+        "pindah": { ".indexOn": "ts" },
+        "audit": { ".indexOn": "ts" },
+        "redeem": { ".indexOn": "ts" }
+      },
+      ".read": true, ".write": true
+    },
     "$other": { ".read": false, ".write": false }
   }
 }</pre>
-              <p style="margin:8px 0 0;font-size:11px;color:var(--ink-400)">Klik "Publish" setelah diganti. Kalau baru pertama kali setup Firebase, langsung pakai rules ini dari awal (tidak perlu langkah tambahan).</p>
+              <p style="margin:8px 0 0;font-size:11px;color:var(--ink-400)">Klik "Publish" setelah diganti. Ini <b>gratis</b> — indexOn bukan fitur berbayar, cuma petunjuk susunan data biasa yang tersedia di paket gratis Firebase (Spark). Data lama tetap aman tersimpan permanen di cloud, cuma tidak diunduh ulang tiap login.</p>
             </details>
 
             <div class="fg">
@@ -1953,9 +1961,34 @@ function tryStartCloudSync(onDone,tries){
     startCloudSyncListener();
   };
   const guard=setTimeout(()=>proceed(true),6000);
-  db.ref(cloudBase()).once('value').then(snap=>{
+  // ══ PERBAIKAN AKAR MASALAH (bukan tambal lagi) ══════════════════════════
+  // Dulu di sini kita tarik SELURUH riwayat sejak hari pertama pakai aplikasi — kalau
+  // sudah berbulan-bulan/tahunan data 10 cabang, ini yang bikin lambat/berat, BUKAN soal
+  // kuota atau biaya Firebase. Sekarang kita cuma minta data yang benar-benar perlu:
+  // transaksi & pemindahan 90 hari terakhir, log audit 30 hari terakhir (data lebih lama
+  // TETAP AMAN tersimpan permanen di cloud, cuma tidak diunduh ulang tiap login — persis
+  // seperti email lama yang tetap ada di server tanpa perlu diunduh semua tiap buka aplikasi).
+  const base=cloudBase();
+  const now=Date.now();
+  const cutoffTrx=now-90*86400000;
+  const cutoffAudit=now-30*86400000;
+  Promise.all([
+    db.ref(base+'/state').once('value'),
+    db.ref(base+'/members').once('value'),
+    db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).once('value'),
+    db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).once('value'),
+    db.ref(base+'/audit').orderByChild('ts').startAt(cutoffAudit).once('value'),
+    db.ref(base+'/redeem').orderByChild('ts').startAt(cutoffTrx).once('value'),
+  ]).then(([stateSnap,membersSnap,trxSnap,pindahSnap,auditSnap,redeemSnap])=>{
     clearTimeout(guard);
-    const val=snap.val()||{};
+    const val={
+      state:stateSnap.val(),
+      members:membersSnap.val(),
+      trx:trxSnap.val(),
+      pindah:pindahSnap.val(),
+      audit:auditSnap.val(),
+      redeem:redeemSnap.val(),
+    };
     // PENGAMAN ANTI-FREEZE (lapis 2, INI YANG PALING PENTING): dulu di sini kita panggil
     // mergeTrxRecord() satu-satu untuk SETIAP transaksi — tiap panggilan baca+urai+urutkan+
     // tulis ulang seluruh array localStorage untuk hari itu. Kalau datanya sudah ribuan
