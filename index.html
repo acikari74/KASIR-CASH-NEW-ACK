@@ -1916,21 +1916,56 @@ function mergeRedeemRecord(entry){
   }
 }
 
+// ══ ANTRIAN EVENT REAL-TIME — INI PERBAIKAN INTINYA ══════════════════════
+// BUG SEBENARNYA yang bikin aplikasi lemot terus-menerus (bukan cuma pas loading):
+// listener real-time di bawah ini dulu memproses SETIAP catatan yang masuk SATU-SATU,
+// masing-masing langsung baca+urutkan+tulis-ulang localStorage + GAMBAR ULANG SELURUH
+// LAYAR. Begitu listener dipasang (tiap login, karena statusnya di-reset tiap buka
+// halaman), Firebase langsung "menyemburkan" event untuk SEMUA data yang ada di rentang
+// yang didengarkan — kalau ada ribuan transaksi (10 cabang, berbulan-bulan), itu jadi
+// ribuan kali gambar-ulang berturut-turut. INI YANG BIKIN LEMOT TERUS, bukan cuma sesaat.
+// Perbaikannya: event yang masuk ditampung dulu di antrian, diproses SEKALIGUS tiap
+// setengah detik lewat mesin gabung yang sudah efisien (bulkMergeCloudSnapshot), dan
+// layar cuma digambar ulang SEKALI per kelompok — bukan sekali per catatan.
+let _clq={trx:[],pindah:[],members:{},audit:[],redeem:[]};
+let _clqTimer=null;
+function clqSchedule(){
+  if(_clqTimer)return;
+  _clqTimer=setTimeout(clqFlush,500);
+}
+function clqFlush(){
+  _clqTimer=null;
+  const q=_clq;
+  _clq={trx:[],pindah:[],members:{},audit:[],redeem:[]};
+  const val={};
+  if(q.trx.length){val.trx={};q.trx.forEach((r,i)=>val.trx['e'+i]=r)}
+  if(q.pindah.length){val.pindah={};q.pindah.forEach((r,i)=>val.pindah['e'+i]=r)}
+  if(Object.keys(q.members).length)val.members=q.members;
+  if(q.audit.length){val.audit={};q.audit.forEach((r,i)=>val.audit['e'+i]=r)}
+  if(q.redeem.length){val.redeem={};q.redeem.forEach((r,i)=>val.redeem['e'+i]=r)}
+  if(Object.keys(val).length===0)return;
+  bulkMergeCloudSnapshot(val,()=>{});
+}
 function startCloudSyncListener(){
   const db=initFirebaseIfPossible();
   if(!db||_cloudListenerActive||!session)return;
   _cloudListenerActive=true;
   const base=cloudBase();
-  db.ref(base+'/trx').on('child_added',snap=>mergeTrxRecord(snap.val()));
-  db.ref(base+'/trx').on('child_changed',snap=>mergeTrxRecord(snap.val()));
+  const now=Date.now();
+  const cutoffTrx=now-90*86400000;
+  const cutoffAudit=now-30*86400000;
+  // Dibatasi rentang tanggal juga di sini (sama seperti tarik data awal) — supaya listener
+  // tidak mendengarkan/menyemburkan SELURUH riwayat, cukup yang relevan untuk operasional harian.
+  db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.trx.push(snap.val());clqSchedule()});
+  db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).on('child_changed',snap=>{_clq.trx.push(snap.val());clqSchedule()});
   db.ref(base+'/trx').on('child_removed',snap=>{const v=snap.val();if(v)removeTrxRecordLocal(v.tgl,v.ts)});
-  db.ref(base+'/pindah').on('child_added',snap=>mergePindahRecord(snap.val()));
-  db.ref(base+'/pindah').on('child_changed',snap=>mergePindahRecord(snap.val()));
-  db.ref(base+'/members').on('child_added',snap=>mergeMemberRecord(snap.key,snap.val()));
-  db.ref(base+'/members').on('child_changed',snap=>mergeMemberRecord(snap.key,snap.val()));
+  db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
+  db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).on('child_changed',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
+  db.ref(base+'/members').on('child_added',snap=>{_clq.members[snap.key]=snap.val();clqSchedule()});
+  db.ref(base+'/members').on('child_changed',snap=>{_clq.members[snap.key]=snap.val();clqSchedule()});
   db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
-  db.ref(base+'/audit').on('child_added',snap=>mergeAuditRecord(snap.val()));
-  db.ref(base+'/redeem').on('child_added',snap=>mergeRedeemRecord(snap.val()));
+  db.ref(base+'/audit').orderByChild('ts').startAt(cutoffAudit).on('child_added',snap=>{_clq.audit.push(snap.val());clqSchedule()});
+  db.ref(base+'/redeem').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.redeem.push(snap.val());clqSchedule()});
   db.ref(cloudStatePath()).on('value',snap=>{
     const val=snap.val();
     if(!val||!val.data)return;
