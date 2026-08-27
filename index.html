@@ -1836,15 +1836,69 @@ function remoteCustomerDisplayUrl(){
 // karena aksi ini jarang dilakukan berbarengan dari 2 device.
 function cloudBase(user){return'brilink_sync/'+(user||session.user)}
 function cloudStatePath(user){return cloudBase(user)+'/state'}
-function pushCloudRecord(kind,key,obj){
+// ══ ANTRIAN KIRIM YANG TAHAN BANTING — INI PERBAIKAN UTAMANYA ══════════════
+// BUG SEBENARNYA yang bikin data 2 komputer beda: sebelumnya, kalau SDK Firebase belum
+// selesai dimuat saat transaksi disimpan (bisa terjadi beberapa detik pertama sesudah
+// aplikasi dibuka), kiriman ke cloud GAGAL DIAM-DIAM tanpa dicoba lagi — transaksi tetap
+// tersimpan di komputer itu (makanya kelihatan normal di situ), tapi TIDAK PERNAH sampai
+// ke cloud, sehingga tidak pernah muncul di komputer sebelah.
+//
+// Perbaikannya: setiap kiriman sekarang masuk ANTRIAN yang disimpan permanen (localStorage),
+// dan terus dicoba ulang otomatis sampai benar-benar berhasil terkirim — termasuk kalau
+// SDK belum siap, internet putus sebentar, atau aplikasinya keburu ditutup sebelum
+// kiriman selesai (antriannya tetap ada, lanjut dicoba lagi saat dibuka lagi).
+function cpqKey(){return'bl_cloud_push_queue'}
+function loadCPQ(){try{return JSON.parse(localStorage.getItem(cpqKey())||'[]')}catch(e){return[]}}
+function saveCPQ(q){localStorage.setItem(cpqKey(),JSON.stringify(q))}
+function enqueueCloudOp(path,op,obj){
+  if(!path)return;
+  const q=loadCPQ();
+  q.push({path,op,obj:obj!==undefined?obj:null,ts:Date.now()});
+  saveCPQ(q);
+  scheduleCPQFlush();
+}
+let _cpqTimer=null,_cpqFlushing=false;
+function scheduleCPQFlush(delay){
+  if(_cpqTimer)return;
+  _cpqTimer=setTimeout(()=>{_cpqTimer=null;flushCPQ()},delay||400);
+}
+function flushCPQ(){
+  if(_cpqFlushing)return;
+  const q=loadCPQ();
+  if(q.length===0)return;
   const db=initFirebaseIfPossible();
-  if(!db||!session)return;
-  try{db.ref(cloudBase()+'/'+kind+'/'+key).set(obj)}catch(e){console.warn('Cloud push record gagal:',e)}
+  if(!db){scheduleCPQFlush(500);return} // SDK/config belum siap — coba lagi sebentar lagi, JANGAN buang antrian
+  _cpqFlushing=true;
+  const remaining=[];
+  let pending=q.length;
+  function selesaiSatu(item,berhasil){
+    if(!berhasil)remaining.push(item);
+    pending--;
+    if(pending<=0){
+      saveCPQ(remaining);
+      _cpqFlushing=false;
+      if(remaining.length>0)scheduleCPQFlush(1500); // masih ada yang gagal (mis. internet putus) — coba lagi
+    }
+  }
+  q.forEach(item=>{
+    try{
+      const ref=db.ref(item.path);
+      const p=(item.op==='remove')?ref.remove():ref.set(item.obj);
+      p.then(()=>selesaiSatu(item,true)).catch(()=>selesaiSatu(item,false));
+    }catch(e){selesaiSatu(item,false)}
+  });
+}
+// Pemicu tambahan supaya antrian pasti dicoba lagi di momen-momen penting:
+window.addEventListener('online',()=>scheduleCPQFlush(200)); // internet baru nyala lagi
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleCPQFlush(200)}); // tab dibuka lagi
+
+function pushCloudRecord(kind,key,obj){
+  if(!session)return;
+  enqueueCloudOp(cloudBase()+'/'+kind+'/'+key,'set',obj);
 }
 function removeCloudRecord(kind,key){
-  const db=initFirebaseIfPossible();
-  if(!db||!session)return;
-  try{db.ref(cloudBase()+'/'+kind+'/'+key).remove()}catch(e){console.warn('Cloud remove record gagal:',e)}
+  if(!session)return;
+  enqueueCloudOp(cloudBase()+'/'+kind+'/'+key,'remove');
 }
 function collectSmallStateForSync(){
   const snap={};
@@ -1857,10 +1911,8 @@ function collectSmallStateForSync(){
 let _lastStatePushTs=0,_cloudStateTimer=null,_cloudListenerActive=false;
 function pushCloudState(){
   if(!session)return;
-  const db=initFirebaseIfPossible();
-  if(!db)return;
   const ts=Date.now();_lastStatePushTs=ts;
-  try{db.ref(cloudStatePath()).set({data:collectSmallStateForSync(),ts})}catch(e){console.warn('Cloud push state gagal:',e)}
+  enqueueCloudOp(cloudStatePath(),'set',{data:collectSmallStateForSync(),ts});
 }
 function scheduleCloudState(){
   if(!session)return;
@@ -2499,6 +2551,7 @@ function startApp(){
   // Sekarang urutannya dibalik: render dengan data LOKAL dulu (langsung, instan, tidak peduli
   // internet), baru sinkron cloud jalan di LATAR BELAKANG tanpa menahan apapun di layar.
   finishStartApp();
+  scheduleCPQFlush(300); // coba kirim ulang antrian yang mungkin tersisa dari sesi sebelumnya
   tryStartCloudSync(function(){
     checkAutoBackfill(); // kirim data lama otomatis kalau device ini belum pernah — sekali per device, tanpa klik apapun
   });
