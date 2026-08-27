@@ -1943,9 +1943,8 @@ function tryStartCloudSync(onDone,tries){
   const db=initFirebaseIfPossible(cfg);
   if(!db){onDone();return}
   toast('🔄 Menyinkronkan data dari cloud...','ok');
-  // PENGAMAN ANTI-FREEZE: apapun yang terjadi, aplikasi WAJIB lanjut dalam maks 6 detik.
-  // Kalau tarik-data dari cloud lambat/nyangkut, kita lanjut pakai data lokal dulu, dan
-  // biarkan sinkron jalan di latar belakang (listener) begitu datanya akhirnya sampai.
+  // PENGAMAN ANTI-FREEZE (lapis 1): apapun yang terjadi, aplikasi WAJIB lanjut dalam maks 6 detik
+  // kalau tarik-data dari cloud sendiri lambat/nyangkut (mis. internet buruk).
   let done=false;
   const proceed=(fromTimeout)=>{
     if(done)return;done=true;
@@ -1955,22 +1954,99 @@ function tryStartCloudSync(onDone,tries){
   };
   const guard=setTimeout(()=>proceed(true),6000);
   db.ref(cloudBase()).once('value').then(snap=>{
+    clearTimeout(guard);
     const val=snap.val()||{};
-    try{
-      _cloudBulkMode=true; // matikan render-per-record dulu supaya tidak freeze
-      if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
-      if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
-      if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
-      if(val.audit)Object.values(val.audit).forEach(mergeAuditRecord);
-      if(val.redeem)Object.values(val.redeem).forEach(mergeRedeemRecord);
-      if(val.state&&val.state.data){
-        Object.keys(val.state.data).forEach(k=>localStorage.setItem(k,val.state.data[k]));
-        _lastStatePushTs=val.state.ts||Date.now();
-      }
-    }catch(e){console.warn('Merge cloud data error:',e)}
-    finally{_cloudBulkMode=false}
-    clearTimeout(guard);proceed(false);
+    // PENGAMAN ANTI-FREEZE (lapis 2, INI YANG PALING PENTING): dulu di sini kita panggil
+    // mergeTrxRecord() satu-satu untuk SETIAP transaksi — tiap panggilan baca+urai+urutkan+
+    // tulis ulang seluruh array localStorage untuk hari itu. Kalau datanya sudah ribuan
+    // (banyak cabang, berbulan-bulan), ini mengunci browser TANPA JEDA selama puluhan detik
+    // sampai menit — persis seperti "tidak merespon sama sekali". Sekarang datanya dikelompokkan
+    // dulu per-hari (1x baca+tulis per hari, bukan per transaksi), dan diproses SEDIKIT DEMI
+    // SEDIKIT dengan jeda di antaranya — supaya browser selalu sempat bernapas & tetap bisa
+    // diklik, tidak peduli seberapa banyak datanya.
+    bulkMergeCloudSnapshot(val,()=>proceed(false));
   }).catch(err=>{console.warn('Cloud initial load gagal:',err);clearTimeout(guard);proceed(false)});
+}
+// Gabungkan data besar dari cloud tanpa pernah mengunci browser: kelompokkan dulu per-kunci
+// penyimpanan (1x baca+tulis per kunci, bukan per catatan), lalu proses sedikit-sedikit
+// dengan jeda (setTimeout 0) di antara tiap kelompok kunci supaya thread utama browser
+// selalu sempat memproses klik & gambar ulang layar di sela-sela proses yang berat.
+function bulkMergeCloudSnapshot(val,doneFn){
+  const jobs=[]; // tiap job = fungsi yang mengerjakan SATU kunci penyimpanan (murah, cepat)
+
+  // Transaksi & pemindahan: dikelompokkan per hari dulu (1 kunci = 1 hari), supaya tiap hari
+  // cuma 1x baca + 1x tulis, bukan 1x per transaksi.
+  function siapkanJobTanggal(dataObj,prefix,jenisLabel){
+    if(!dataObj)return;
+    const grup={};
+    Object.values(dataObj).forEach(r=>{
+      if(!r||!r.tgl||!r.ts)return;
+      const key=prefix+session.user+'_'+r.tgl;
+      (grup[key]=grup[key]||[]).push(r);
+    });
+    Object.keys(grup).forEach(key=>{
+      jobs.push(()=>{
+        let arr=[];
+        try{arr=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){arr=[]}
+        const byTs={};
+        arr.forEach(r=>{if(r&&r.ts!=null)byTs[r.ts]=r});
+        grup[key].forEach(r=>{byTs[r.ts]=r});
+        const merged=Object.values(byTs).sort((a,b)=>(a.ts||0)-(b.ts||0));
+        localStorage.setItem(key,JSON.stringify(merged));
+      });
+    });
+  }
+  siapkanJobTanggal(val.trx,'bl_trx_','transaksi');
+  siapkanJobTanggal(val.pindah,'bl_pindah_','pemindahan');
+
+  // Member, audit, redeem: masing-masing cuma SATU array total (bukan per-hari) —
+  // jadi cukup 1 job untuk masing-masing, gabungkan semua sekaligus dalam satu baca+tulis.
+  if(val.members)jobs.push(()=>{
+    let arr=getMembers();
+    const byId={};arr.forEach(m=>{if(m&&m.id)byId[m.id]=m});
+    Object.keys(val.members).forEach(id=>{byId[id]=val.members[id]});
+    localStorage.setItem('bl_members_global',JSON.stringify(Object.values(byId)));
+  });
+  if(val.audit)jobs.push(()=>{
+    let logs=[];
+    try{logs=JSON.parse(localStorage.getItem('bl_audit')||'[]')}catch(e){logs=[]}
+    const byTs={};logs.forEach(l=>{if(l&&l.ts!=null)byTs[l.ts]=l});
+    Object.values(val.audit).forEach(l=>{if(l&&l.ts!=null)byTs[l.ts]=l});
+    let merged=Object.values(byTs).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    if(merged.length>2000)merged=merged.slice(merged.length-2000);
+    localStorage.setItem('bl_audit',JSON.stringify(merged));
+  });
+  if(val.redeem)jobs.push(()=>{
+    let arr=[];
+    try{arr=JSON.parse(localStorage.getItem('bl_redemptions')||'[]')}catch(e){arr=[]}
+    const byTs={};arr.forEach(r=>{if(r&&r.ts!=null)byTs[r.ts]=r});
+    Object.values(val.redeem).forEach(r=>{if(r&&r.ts!=null)byTs[r.ts]=r});
+    localStorage.setItem('bl_redemptions',JSON.stringify(Object.values(byTs)));
+  });
+  if(val.state&&val.state.data)jobs.push(()=>{
+    Object.keys(val.state.data).forEach(k=>localStorage.setItem(k,val.state.data[k]));
+    _lastStatePushTs=val.state.ts||Date.now();
+  });
+
+  invalidateScanCache();
+  let i=0;
+  const CHUNK=4; // kerjakan 4 kunci penyimpanan sekaligus, lalu kasih jeda ke browser
+  function langkah(){
+    const batas=Math.min(i+CHUNK,jobs.length);
+    for(;i<batas;i++){
+      try{jobs[i]()}catch(e){console.warn('Bulk merge job error:',e)}
+    }
+    invalidateScanCache();
+    if(i<jobs.length){
+      setTimeout(langkah,0); // beri jeda — browser sempat memproses klik & gambar ulang di sini
+    } else {
+      loadData();render();renderMembers();renderKas();
+      if(document.getElementById('pageAdmin')&&document.getElementById('pageAdmin').classList.contains('active')){renderAuditLog();renderAdminAccounts()}
+      doneFn();
+    }
+  }
+  if(jobs.length===0){doneFn();return}
+  langkah();
 }
 // Dipakai saat login gagal secara lokal — mungkin akun ini baru dibuat di device lain,
 // jadi coba tarik daftar akun terbaru dari cloud sebelum menyerah.
