@@ -1050,7 +1050,7 @@ tr:hover td{background:#FAFBFF}
             </div>
             <button class="btn-primary" onclick="backupData()" style="flex-shrink:0">⬇ Backup Sekarang</button>
           </div>
-          <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">⚠️ Data aplikasi ini tersimpan <b>di browser komputer ini saja</b> — kalau komputer rusak, browser di-uninstall, atau cache dibersihkan, data bisa <b>hilang total</b> kalau belum pernah backup.<br><br>📌 <b>Penting kalau tiap cabang pakai komputer sendiri-sendiri:</b> backup & restore hanya berlaku untuk data <b>di komputer tempat kamu klik tombolnya</b>. Kalau komputer suatu cabang bermasalah, cabang itu bisa restore sendiri dari backup terakhirnya — klik menu profil (pojok kiri bawah) → "⬆ Restore Data Komputer Ini", tanpa perlu Admin.</div>
+          <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">✅ <b>Data kamu sudah aman secara real-time di cloud (Firebase)</b> — tidak lagi cuma tersimpan di komputer ini. Backup manual di bawah ini sifatnya cadangan tambahan saja, bukan satu-satunya jaring pengaman lagi.<br><br>📌 <b>Kalau komputer suatu cabang bermasalah</b>, cabang itu bisa langsung login di komputer lain manapun dan datanya otomatis muncul lagi (tersinkron dari cloud) — tidak perlu restore file segala. Fitur "⬆ Restore Data Komputer Ini" di menu profil tetap ada untuk situasi khusus (misal belum ada internet saat itu).</div>
 
           <div class="backup-status-card" id="storageHealthCard">
             <div class="backup-status-icon" id="storageHealthIcon">📦</div>
@@ -1063,16 +1063,16 @@ tr:hover td{background:#FAFBFF}
           <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">☁️ <b>Data kamu sudah aman di cloud, tidak perlu unduh manual:</b> kalau sinkronisasi Firebase sudah diaktifkan, setiap transaksi otomatis tersimpan permanen di internet sejak awal — <b>bukan cuma di komputer ini</b>. Jadi data <b>tidak akan pernah hilang</b> hanya karena penyimpanan lokal dibersihkan.<br><br>Tombol di samping cuma untuk membersihkan <b>salinan lokal</b> di komputer ini kalau penyimpanan browser mulai penuh (lihat status di atas) — sepenuhnya <b>opsional, tidak wajib dan tidak otomatis</b>. Data yang lebih lama dari 90 hari akan dihapus dari komputer ini saja (bukan dari cloud), supaya browser tetap ringan. Saldo, kas, dan poin member dijamin tidak berubah. Kalau sinkronisasi cloud belum aktif, sistem akan mengunduh file cadangan dulu sebelum membersihkan, sebagai jaring pengaman.</div>
 
           <div class="filter-card" style="margin-bottom:20px">
-            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">☁️ Backup Otomatis 3-Harian ke Google Drive — Cara Setup (sekali saja)</div>
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">☁️ (Opsional) Supaya Backup Manual Otomatis Masuk ke Google Drive</div>
             <div style="font-size:12px;color:var(--ink-600);line-height:1.9">
-              Sistem ini <b>sudah otomatis membuat file backup dan mengunduhnya</b> tiap 3 hari sekali begitu ada yang login (tidak perlu klik apapun). Supaya file itu otomatis masuk ke Google Drive akun <b>acikari74@gmail.com</b>, arahkan folder unduhan browser ke folder Google Drive Desktop, satu kali saja per komputer:
+              Data utama kamu sudah aman otomatis di Firebase secara real-time — bagian ini cuma untuk yang <b>ingin tambahan</b>: kalau sesekali klik tombol "⬇ Backup Data" (di menu profil atau Panel Admin), begini caranya supaya file itu otomatis ikut tersimpan ke Google Drive juga, satu kali setup saja per komputer:
               <ol style="margin:10px 0 10px 18px;padding:0">
                 <li>Install <b>Google Drive untuk Desktop</b> di komputer ini, login pakai <b>acikari74@gmail.com</b> (kalau belum ada).</li>
                 <li>Biarkan Drive membuat folder sync, misalnya <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">G:\My Drive</span> atau <span style="font-family:var(--mono);background:var(--paper-100);padding:1px 5px;border-radius:4px">~/Google Drive</span>. Buat subfolder baru di dalamnya, misal <b>"Backup BRILink"</b>.</li>
-                <li>Di browser (Chrome/Edge): buka <b>Settings → Downloads</b> → ubah lokasi unduhan ke folder "Backup BRILink" tadi, dan aktifkan "Ask where to save each file" <b>dimatikan (off)</b> supaya tidak perlu konfirmasi tiap kali.</li>
-                <li>Selesai. Mulai sekarang, tiap file backup yang otomatis ter-download akan langsung ke-sync ke Google Drive dalam hitungan detik — bisa dicek langsung dari drive.google.com pakai akun acikari74@gmail.com.</li>
+                <li>Di browser (Chrome/Edge): buka <b>Settings → Downloads</b> → ubah lokasi unduhan ke folder "Backup BRILink" tadi.</li>
+                <li>Selesai. Mulai sekarang, tiap kali kamu klik backup manual, filenya otomatis ke-sync ke Google Drive dalam hitungan detik.</li>
               </ol>
-              <div style="background:var(--amber-lt);border:1px solid #f0dba0;border-radius:8px;padding:10px 12px;margin-top:8px;color:var(--amber-600);font-weight:600">Catatan jujur: aplikasi ini file HTML biasa, bukan aplikasi server — jadi tidak bisa "login ke Google" atau upload langsung dari dalam aplikasi (Google memang membatasi ini demi keamanan). Trik folder-sync di atas adalah cara paling praktis yang benar-benar berfungsi tanpa perlu setup server tambahan.</div>
+              <div style="background:var(--amber-lt);border:1px solid #f0dba0;border-radius:8px;padding:10px 12px;margin-top:8px;color:var(--amber-600);font-weight:600">Ingat: ini cuma cadangan TAMBAHAN yang sifatnya opsional. Kalau tidak sempat setup ini pun, data kamu tetap aman karena sudah otomatis tersimpan real-time di Firebase.</div>
             </div>
           </div>
 
@@ -2462,22 +2462,17 @@ function finishStartApp(){
 // (punya acikari74@gmail.com) — begitu file backup ke-download di sini, Drive Desktop akan
 // otomatis mengunggahnya ke cloud dalam hitungan detik, tanpa perlu API/login apapun di sini.
 // Lihat panduan lengkap di Panel Admin.
-const AUTO_BACKUP_INTERVAL_DAYS=3;
 function checkAutoBackup(){
-  const ts=parseInt(localStorage.getItem('bl_last_backup_ts')||'0');
-  const days=ts?Math.floor((Date.now()-ts)/86400000):null;
-  if(days===null||days>=AUTO_BACKUP_INTERVAL_DAYS){
-    setTimeout(()=>toast('🔄 Menyiapkan backup otomatis 3-harian...','ok'),800);
-    setTimeout(()=>{
-      backupData();
-      toast('💾 Backup otomatis tersimpan — pastikan folder unduhan sudah ter-sync ke Google Drive','ok');
-    },2200);
-  }
+  // Dulu di sini ada backup FILE OTOMATIS tiap 3 hari — sekarang dihapus karena sudah
+  // tidak diperlukan lagi. Firebase sudah menyimpan SETIAP transaksi secara real-time ke
+  // cloud sejak awal — itu jauh lebih baik daripada file backup yang cuma "potret" tiap 3
+  // hari (dan bikin folder Downloads penuh file tak berguna). Tombol "Backup Sekarang" di
+  // Panel Admin tetap ada untuk yang ingin backup manual sesekali (opsional, tidak wajib).
+
   // Peringatan dini kalau penyimpanan browser hampir penuh (khusus untuk pemakaian jangka panjang).
-  // Catatan: TIDAK ADA proses arsip/hapus otomatis diam-diam. Data transaksi setiap cabang
-  // sudah otomatis tersimpan permanen di cloud (Firebase) sejak awal — jadi kalaupun
-  // penyimpanan lokal browser penuh, data TIDAK hilang, cuma perlu dibersihkan manual
-  // sesekali dari Panel Admin kalau memang mulai penuh (tidak wajib, cuma kalau perlu).
+  // Data transaksi setiap cabang sudah otomatis tersimpan permanen di cloud (Firebase) sejak
+  // awal — jadi kalaupun penyimpanan lokal browser penuh, data TIDAK hilang, cuma perlu
+  // dibersihkan manual sesekali dari Panel Admin kalau memang mulai penuh (tidak wajib).
   try{
     const pct=Math.round(estimateStorageUsage()/1048576/5*100);
     if(pct>=85)setTimeout(()=>toast('⚠️ Penyimpanan hampir penuh ('+pct+'%). Data aman di cloud — buka Panel Admin untuk bersihkan penyimpanan lokal kalau perlu','err'),3400);
@@ -3766,32 +3761,18 @@ function renderBackupStatus(){
   if(!card)return;
   const ts=parseInt(localStorage.getItem('bl_last_backup_ts')||'0');
   card.classList.remove('ok','warn','danger');
+  card.classList.add('ok'); // selalu netral/tenang — backup manual ini cuma cadangan tambahan, bukan yang utama lagi
   if(!ts){
-    card.classList.add('danger');
-    icon.textContent='⚠️';
-    title.textContent='Belum pernah backup sama sekali';
-    sub.textContent='Backup otomatis akan jalan otomatis saat login berikutnya, atau klik tombol di samping sekarang juga.';
+    icon.textContent='ℹ️';
+    title.textContent='Belum pernah backup manual — tidak masalah';
+    sub.textContent='Data kamu sudah otomatis aman di cloud (Firebase) secara real-time. Tombol di samping cuma untuk backup file cadangan TAMBAHAN kalau kamu mau, sepenuhnya opsional.';
     return;
   }
   const days=Math.floor((Date.now()-ts)/86400000);
   const tgl=new Date(ts).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
-  if(days<1){
-    card.classList.add('ok');icon.textContent='✅';
-    title.textContent='Data aman — backup otomatis terakhir hari ini';
-    sub.textContent='Terakhir: '+tgl+' · Backup otomatis berikutnya dalam '+(AUTO_BACKUP_INTERVAL_DAYS-days)+' hari';
-  } else if(days<AUTO_BACKUP_INTERVAL_DAYS){
-    card.classList.add('ok');icon.textContent='✅';
-    title.textContent='Backup terakhir '+days+' hari lalu';
-    sub.textContent='Terakhir: '+tgl+' · Backup otomatis berikutnya dalam '+(AUTO_BACKUP_INTERVAL_DAYS-days)+' hari (saat login)';
-  } else if(days<=7){
-    card.classList.add('warn');icon.textContent='🟡';
-    title.textContent='Sudah '+days+' hari — backup otomatis harusnya sudah jalan';
-    sub.textContent='Terakhir: '+tgl+' — kalau belum ke-download otomatis, coba logout lalu login lagi, atau klik "Backup Sekarang".';
-  } else {
-    card.classList.add('danger');icon.textContent='⚠️';
-    title.textContent='Sudah '+days+' hari TIDAK backup!';
-    sub.textContent='Terakhir: '+tgl+' — kemungkinan aplikasi ini sudah lama tidak dibuka. Backup sekarang untuk amankan data terbaru.';
-  }
+  icon.textContent='✅';
+  title.textContent=days<1?'Backup manual terakhir hari ini':'Backup manual terakhir '+days+' hari lalu';
+  sub.textContent='Terakhir: '+tgl+' — data utama tetap aman real-time di cloud (Firebase), backup ini cuma cadangan tambahan opsional.';
 }
 function renderAuditLog(){
   const logs=JSON.parse(localStorage.getItem('bl_audit')||'[]').slice().reverse().slice(0,300);
