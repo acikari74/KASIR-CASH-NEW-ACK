@@ -104,15 +104,7 @@ button{font-family:inherit}
 .app-shell{display:flex;height:100vh}
 
 /* RAIL (left sidebar navigation, banking-dashboard style) */
-.rail{width:248px;flex-shrink:0;background:linear-gradient(185deg,var(--navy-950),var(--navy-900) 70%);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:920;transform:translateX(-100%);transition:transform .25s ease;box-shadow:6px 0 24px rgba(0,0,0,.25)}
-.rail.open{transform:translateX(0)}
-.rail-backdrop{display:none;position:fixed;inset:0;background:rgba(8,15,30,.45);z-index:910;backdrop-filter:blur(1px)}
-.rail-backdrop.show{display:block}
-.hamburger-btn{position:fixed;top:10px;left:10px;z-index:900;width:32px;height:32px;border-radius:9px;background:linear-gradient(185deg,var(--navy-950),var(--navy-900));border:1px solid rgba(216,185,92,.35);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;box-shadow:0 3px 10px rgba(0,0,0,.25);transition:transform .15s,box-shadow .15s}
-.hamburger-btn:hover{transform:scale(1.06);box-shadow:0 6px 18px rgba(0,0,0,.35)}
-.hamburger-btn span{display:block;width:14px;height:2px;border-radius:2px;background:var(--gold-500,#d8b95c);transition:all .2s}
-.rail-close-x{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.7);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
-.rail-close-x:hover{background:rgba(255,255,255,.16);color:#fff}
+.rail{width:232px;flex-shrink:0;background:linear-gradient(185deg,var(--navy-950),var(--navy-900) 70%);display:flex;flex-direction:column;height:100vh;position:relative}
 .rail::after{content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(216,185,92,.18) 30%,rgba(216,185,92,.18) 70%,transparent)}
 .rail-brand{display:flex;align-items:center;gap:9px;padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:6px}
 .rail-icon{width:28px;height:28px;background:var(--foil);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:11px;font-weight:700;color:var(--navy-950);flex-shrink:0;box-shadow:0 3px 8px rgba(189,149,48,.3)}
@@ -142,7 +134,7 @@ button{font-family:inherit}
 .tb-msep{height:1px;background:var(--paper-100);margin:2px 0}
 
 /* MAIN AREA */
-.app-main{flex:1;height:100vh;overflow:hidden;display:flex;flex-direction:column;min-width:0;padding-left:48px}
+.app-main{flex:1;height:100vh;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .page{display:none;height:100%;overflow:hidden}
 .page.active{display:flex;flex-direction:column;height:100%}
 
@@ -155,7 +147,7 @@ button{font-family:inherit}
 .resizer:hover::after,.resizer.dragging::after{background:var(--gold-500)}
 
 /* RAIL RESIZER — drag to resize the left navigation sidebar */
-.rail-resizer{display:none!important;width:6px;background:var(--navy-950);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
+.rail-resizer{width:6px;background:var(--navy-950);cursor:col-resize;flex-shrink:0;position:relative;z-index:10;user-select:none}
 .rail-resizer::before{content:'';position:absolute;top:0;bottom:0;left:2.5px;width:1px;background:rgba(255,255,255,.08);transition:background .15s}
 .rail-resizer:hover::before,.rail-resizer.dragging::before{background:var(--gold-500);width:2px;left:2px}
 .rail-resizer::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:3px;height:26px;border-radius:3px;background:rgba(255,255,255,.18);pointer-events:none}
@@ -637,6 +629,10 @@ tr:hover td{background:#FAFBFF}
 
 /* ═══ RESPONSIVE ═══════════════════════════════════════════ */
 @media (max-width:980px){
+  .rail{width:76px}
+  .rail-brand-txt,.rail-name+*,.nb span:not(.nb-ic){display:none}
+  .nb{justify-content:center;padding:11px}
+  .rail-branch,.tb-uname,.tb-urole{display:none}
   .stats-grid,.kas-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
@@ -671,6 +667,7 @@ tr:hover td{background:#FAFBFF}
       <div class="lg"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="lg"><label>Nama Petugas</label><input id="loginNama" placeholder="Nama Anda" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="login-btn" onclick="doLogin()"><span>Masuk ke Sistem →</span></button>
+      <div class="login-hint"><b>Kasir:</b> cabang1–cabang10 (password: brilink123) &nbsp;·&nbsp; <b>Admin:</b> admin (password: admin123)<br>Password disimpan terenkripsi (hash). Segera ganti password default setelah login pertama.</div>
     </div>
   </div>
 </div>
@@ -679,15 +676,8 @@ tr:hover td{background:#FAFBFF}
 <div id="appScreen">
   <div class="app-shell">
 
-    <!-- HAMBURGER (garis tiga) — buka/tutup sidebar -->
-    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleRail()" title="Buka menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="rail-backdrop" id="railBackdrop" onclick="closeRail()"></div>
-
-    <!-- RAIL / SIDEBAR NAVIGATION (drawer) -->
-    <div class="rail" id="railDrawer">
-      <button class="rail-close-x" onclick="closeRail()" title="Tutup menu">✕</button>
+    <!-- RAIL / SIDEBAR NAVIGATION -->
+    <div class="rail">
       <div class="rail-brand">
         <div class="rail-icon">BR</div>
         <div class="rail-brand-txt">
@@ -784,8 +774,8 @@ tr:hover td{background:#FAFBFF}
                 <div class="rfid-default" id="rfidDefault">
                   <div class="rfid-default-icon">📡</div>
                   <div class="rfid-default-text">
-                    <div class="t1">Cari member</div>
-                    <div class="t2">Klik di sini, lalu ketik nama atau No. HP customer</div>
+                    <div class="t1">Tap / ketik ID kartu member</div>
+                    <div class="t2">Klik di sini untuk mencari member</div>
                   </div>
                 </div>
                 <div id="rfidFound" style="display:none">
@@ -800,10 +790,9 @@ tr:hover td{background:#FAFBFF}
                   <button class="rfid-clear" onclick="clearRfid(event)">✕</button>
                 </div>
                 <div class="rfid-search-row" id="rfidSearchRow" style="display:none" onclick="event.stopPropagation()">
-                  <input id="rfidQ" placeholder="Nama atau No. HP customer" oninput="searchRfidLive()" onkeydown="if(event.key==='Enter')searchRfid()">
+                  <input id="rfidQ" placeholder="ID kartu atau No. HP member" onkeydown="if(event.key==='Enter')searchRfid()">
                   <button onclick="searchRfid()">Cari</button>
                 </div>
-                <div id="rfidResults" style="display:none;flex-direction:column;gap:6px;margin-top:8px" onclick="event.stopPropagation()"></div>
               </div>
 
               <!-- JENIS -->
@@ -835,7 +824,7 @@ tr:hover td{background:#FAFBFF}
                 <label>Nominal Transaksi</label>
                 <div class="money-wrap nominal-big">
                   <div class="money-pre">Rp</div>
-                  <input class="fi money-inp" id="fNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney(this);autoFeeFromNominal()">
+                  <input class="fi money-inp" id="fNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
                 </div>
               </div>
 
@@ -848,7 +837,7 @@ tr:hover td{background:#FAFBFF}
                   </div>
                 </div>
                 <div class="fg">
-                  <label>Fee Agen <span class="opt">otomatis, bisa diubah</span></label>
+                  <label>Fee Agen</label>
                   <div class="money-wrap">
                     <div class="money-pre">Rp</div>
                     <input class="fi money-inp" id="fFee" placeholder="0" inputmode="numeric" oninput="fmtMoney(this)">
@@ -913,6 +902,7 @@ tr:hover td{background:#FAFBFF}
 
           <!-- MAIN PANEL -->
           <div class="main" id="mainPanel">
+            <div class="stats-grid" id="statsRow"></div>
             <div class="filter-card">
               <div class="filter-grid">
                 <div class="fg-f"><label>Tanggal</label><input type="date" id="fltTgl" onchange="filterChanged()"></div>
@@ -951,7 +941,6 @@ tr:hover td{background:#FAFBFF}
           <div class="pg-top">
             <div><div class="pg-heading">Kas &amp; Saldo</div><div class="pg-sub">Cek uang tunai dan saldo bank hari ini</div></div>
             <div class="pg-actions">
-              <button class="btn-purple" onclick="openPinjaman()">💳 Pinjaman</button>
               <button class="btn-purple" onclick="openPindahSaldo()">🔁 Pindahkan Saldo</button>
               <button class="btn-primary" id="btnAturSaldo" onclick="openSetSaldo()">💵 Atur Saldo</button>
             </div>
@@ -992,13 +981,6 @@ tr:hover td{background:#FAFBFF}
               <div class="tbl-title">Riwayat Pemindahan Hari Ini</div>
             </div>
             <div id="pindahHistList" style="max-height:280px;overflow-y:auto;padding:4px 20px"></div>
-          </div>
-
-          <div class="tbl-card" style="margin-bottom:20px">
-            <div class="tbl-head">
-              <div class="tbl-title">💳 Riwayat Pinjaman Hari Ini</div>
-            </div>
-            <div id="pinjamHistList" style="max-height:280px;overflow-y:auto;padding:4px 20px"></div>
           </div>
 
           <div class="limit-card">
@@ -1070,6 +1052,16 @@ tr:hover td{background:#FAFBFF}
           </div>
           <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">⚠️ Data aplikasi ini tersimpan <b>di browser komputer ini saja</b> — kalau komputer rusak, browser di-uninstall, atau cache dibersihkan, data bisa <b>hilang total</b> kalau belum pernah backup.<br><br>📌 <b>Penting kalau tiap cabang pakai komputer sendiri-sendiri:</b> backup & restore hanya berlaku untuk data <b>di komputer tempat kamu klik tombolnya</b>. Kalau komputer suatu cabang bermasalah, cabang itu bisa restore sendiri dari backup terakhirnya — klik menu profil (pojok kiri bawah) → "⬆ Restore Data Komputer Ini", tanpa perlu Admin.</div>
 
+          <div class="backup-status-card" id="storageHealthCard">
+            <div class="backup-status-icon" id="storageHealthIcon">📦</div>
+            <div style="flex:1">
+              <div class="backup-status-title" id="storageHealthTitle">Kesehatan Penyimpanan</div>
+              <div class="backup-status-sub" id="storageHealthSub">—</div>
+            </div>
+            <button class="btn-clr" onclick="arsipDataLama(90)" style="flex-shrink:0">🧹 Bersihkan Data Lokal &gt;90 Hari</button>
+          </div>
+          <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">☁️ <b>Data kamu sudah aman di cloud, tidak perlu unduh manual:</b> kalau sinkronisasi Firebase sudah diaktifkan, setiap transaksi otomatis tersimpan permanen di internet sejak awal — <b>bukan cuma di komputer ini</b>. Jadi data <b>tidak akan pernah hilang</b> hanya karena penyimpanan lokal dibersihkan.<br><br>Tombol di samping cuma untuk membersihkan <b>salinan lokal</b> di komputer ini kalau penyimpanan browser mulai penuh (lihat status di atas) — sepenuhnya <b>opsional, tidak wajib dan tidak otomatis</b>. Data yang lebih lama dari 90 hari akan dihapus dari komputer ini saja (bukan dari cloud), supaya browser tetap ringan. Saldo, kas, dan poin member dijamin tidak berubah. Kalau sinkronisasi cloud belum aktif, sistem akan mengunduh file cadangan dulu sebelum membersihkan, sebagai jaring pengaman.</div>
+
           <div class="filter-card" style="margin-bottom:20px">
             <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">☁️ Backup Otomatis 3-Harian ke Google Drive — Cara Setup (sekali saja)</div>
             <div style="font-size:12px;color:var(--ink-600);line-height:1.9">
@@ -1086,7 +1078,7 @@ tr:hover td{background:#FAFBFF}
 
           <div class="filter-card" style="margin-bottom:20px">
             <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer (opsional)</div>
-            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Aktifkan koneksi database internet (Firebase, gratis) di bawah ini, maka <b>seluruh data (transaksi, member, kas/saldo, akun) tersimpan otomatis di database internet</b> — bukan lagi terkunci per-komputer:<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time. Data lama yang sudah ada di komputer ini pun ikut diunggah otomatis.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah.<br>3️⃣ Kalau internet putus sebentar, transaksi tetap tercatat di device dan <b>otomatis diunggah begitu internet kembali</b> — kasir tidak pernah berhenti.</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">Secara default, data (transaksi, member, kas/saldo, dll) tersimpan <b>di masing-masing komputer sendiri-sendiri</b> — tidak nyambung satu sama lain. Aktifkan Firebase di bawah ini untuk 2 manfaat sekaligus (gratis, butuh internet):<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> (komputer/tablet lain) otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa dipakai di tablet/HP terpisah, bukan cuma jendela kedua di komputer yang sama.</div>
 
             <details style="margin-bottom:14px">
               <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 Cara bikin akun Firebase gratis (sekali saja, ± 5 menit, semua klik-klik saja)</summary>
@@ -1114,19 +1106,13 @@ tr:hover td{background:#FAFBFF}
             </details>
 
             <div class="fg">
-              <label>Tempel Firebase Config di sini (boleh apa adanya dari Firebase Console — sistem membersihkan &amp; menguji otomatis)</label>
-              <textarea class="fi" id="fbConfigInput" placeholder='const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  ...
-};   ← tempel persis seperti ini juga BISA, tidak perlu diedit' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
+              <label>Tempel Firebase Config di sini</label>
+              <textarea class="fi" id="fbConfigInput" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://...","projectId":"...","...":"..."}' style="height:110px;font-family:var(--mono);font-size:11.5px"></textarea>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:6px">
-              <button class="btn-primary" id="fbSaveBtn" onclick="saveFirebaseConfigUI()">💾 Simpan &amp; Uji Koneksi</button>
+              <button class="btn-primary" onclick="saveFirebaseConfigUI()">💾 Simpan Konfigurasi</button>
               <button class="btn-clr" onclick="removeFirebaseConfigUI()">🗑 Hapus Konfigurasi</button>
             </div>
-            <div id="fbConnStatus" style="display:none;border-radius:8px;padding:10px 13px;font-size:12px;font-weight:600;line-height:1.7;margin-bottom:6px"></div>
 
             <div id="fbLinkSection" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--ink-100)">
               <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:10px">✅ Sinkronisasi aktif untuk cabang: <span id="fbCabangLabel" style="font-family:var(--mono)">—</span></div>
@@ -1165,26 +1151,6 @@ tr:hover td{background:#FAFBFF}
               <button class="btn-primary" onclick="saveLimitSetting()">💾 Simpan Pengaturan</button>
             </div>
             <div style="font-size:11px;color:var(--ink-400);margin-top:10px;line-height:1.6">Kalau nominal satu transaksi Tarik Tunai atau Transfer melebihi angka ini, kasir wajib minta konfirmasi akun Admin sebelum transaksi bisa disimpan. Kosongkan / isi 0 untuk tanpa batas.</div>
-          </div>
-
-          <div class="tbl-card" style="margin-bottom:20px">
-            <div class="tbl-head">
-              <div class="tbl-title">⚡ Auto Fee Agen (berdasarkan nominal transaksi)</div>
-              <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-600);cursor:pointer;font-weight:600">
-                <input type="checkbox" id="feeAutoOn" onchange="saveFeeRules(true)"> Aktifkan
-              </label>
-            </div>
-            <div style="padding:14px 20px 18px">
-              <div style="font-size:11.5px;color:var(--ink-400);line-height:1.6;margin-bottom:12px">Saat kasir mengetik nominal transaksi, kolom <b>Fee Agen</b> di form kasir otomatis terisi sesuai tingkatan di bawah — tidak perlu input manual lagi. Kasir tetap bisa mengubahnya kalau perlu. Baris dengan "Sampai Nominal" dikosongkan / 0 berlaku untuk <b>di atas semua tingkat</b>.</div>
-              <table style="width:100%">
-                <thead><tr><th>Sampai Nominal (Rp)</th><th>Fee Agen (Rp)</th><th style="width:60px"></th></tr></thead>
-                <tbody id="feeRulesBody"></tbody>
-              </table>
-              <div style="display:flex;gap:8px;margin-top:12px">
-                <button class="btn-primary" style="padding:7px 13px;font-size:11.5px" onclick="addFeeRule()">+ Tambah Tingkat</button>
-                <button class="btn-ok" style="padding:7px 13px;font-size:11.5px" onclick="saveFeeRules()">💾 Simpan Aturan Fee</button>
-              </div>
-            </div>
           </div>
 
           <div class="tbl-card" style="margin-bottom:20px">
@@ -1230,7 +1196,7 @@ tr:hover td{background:#FAFBFF}
           <div class="tier-promo" id="tierPromoContainer"></div>
 
           <div class="msearch">
-            <div class="fg-f"><label>Cari Nama / No. HP Customer</label><input id="mSearch" placeholder="Ketik nama atau nomor HP..." oninput="memberFilterChanged()"></div>
+            <div class="fg-f"><label>Cari nama / HP / ID kartu</label><input id="mSearch" placeholder="Ketik untuk mencari..." oninput="memberFilterChanged()"></div>
             <div class="fg-f"><label>Tier</label><select id="mTier" onchange="memberFilterChanged()"><option value="">Semua tier</option><option>Regular</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></div>
             <button class="btn-clr" onclick="clearMemberFilter()">✕ Reset</button>
             <button class="btn-export" onclick="exportMemberExcel()">⬇ Export Excel</button>
@@ -1367,13 +1333,12 @@ tr:hover td{background:#FAFBFF}
     <input type="hidden" id="editMemberId">
     <div class="mgrid">
       <div class="fg"><label>Nama lengkap *</label><input class="fi" id="mNama" placeholder="Nama member"></div>
-      <div class="fg"><label>No. HP <span class="opt">opsional, untuk pencarian</span></label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
-      <div class="fg" style="display:none"><label>ID Kartu RFID</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
+      <div class="fg"><label>No. HP *</label><input class="fi" id="mHp" placeholder="08xx-xxxx-xxxx" type="tel"></div>
+      <div class="fg"><label>ID Kartu RFID *</label><input class="fi" id="mRfid" placeholder="RF-XXXXXXXX" style="font-family:var(--mono)"></div>
       <div class="fg"><label>Tanggal lahir <span class="opt">opsional</span></label><input class="fi" id="mTglLahir" type="date"></div>
-      <div class="fg"><label>Poin awal</label><input class="fi" id="mPoin" type="number" min="0" value="0"></div>
       <div class="fg" style="grid-column:span 2"><label>Alamat <span class="opt">opsional</span></label><input class="fi" id="mAlamat" placeholder="Alamat singkat"></div>
+      <div class="fg"><label>Poin awal</label><input class="fi" id="mPoin" type="number" min="0" value="0"></div>
     </div>
-    <div style="font-size:11px;color:var(--ink-400);margin:2px 0 6px;line-height:1.6">💡 Cukup isi nama saja — ID Kartu RFID dibuat otomatis oleh sistem.</div>
     <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalMember')">Batal</button><button class="btn-ok" onclick="saveMember()">Simpan Member</button></div>
   </div>
 </div>
@@ -1465,48 +1430,6 @@ tr:hover td{background:#FAFBFF}
     </div>
     <div class="fg"><label>Catatan <span class="opt">opsional</span></label><input class="fi" id="pindahKet" placeholder="mis: Setor kas berlebih ke BRI"></div>
     <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPindah')">Batal</button><button class="btn-ok" onclick="prosesPindah()">Pindahkan</button></div>
-  </div>
-</div>
-
-<!-- MODAL PINJAMAN -->
-<div class="mo" id="modalPinjaman">
-  <div class="md" style="max-width:400px">
-    <div class="md-title">💳 Catat Pinjaman</div>
-    <p style="font-size:12.5px;color:var(--ink-500);margin-bottom:16px;line-height:1.6">Catat dana pinjaman yang masuk. Nominal pinjaman akan otomatis <b>menambah total saldo keseluruhan</b> sesuai tujuan dana yang dipilih.</p>
-    <div class="fg"><label>Dana Masuk Ke</label>
-      <select class="fi" id="pinjamKe">
-        <option value="KAS" selected>💵 Kas Tunai</option>
-        <option value="BRI">🔵 Saldo BRI</option>
-        <option value="TRF">🟢 Saldo Bank Transfer</option>
-      </select>
-    </div>
-    <div class="fg"><label>Nominal Pinjaman</label>
-      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="pinjamNominal" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
-    </div>
-    <div class="fg"><label>Pemberi Pinjaman <span class="opt">opsional</span></label><input class="fi" id="pinjamPemberi" placeholder="mis: Bank BRI / Pak Budi"></div>
-    <div class="fg"><label>Catatan <span class="opt">opsional</span></label><input class="fi" id="pinjamKet" placeholder="mis: Pinjaman modal tambahan"></div>
-    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalPinjaman')">Batal</button><button class="btn-ok" onclick="prosesPinjaman()">Simpan Pinjaman</button></div>
-  </div>
-</div>
-
-<!-- MODAL PELUNASAN PINJAMAN -->
-<div class="mo" id="modalLunasPinjam">
-  <div class="md" style="max-width:400px">
-    <div class="md-title">✅ Pelunasan Pinjaman</div>
-    <p style="font-size:12.5px;color:var(--ink-500);margin-bottom:16px;line-height:1.6" id="lunasInfo"></p>
-    <div class="fg"><label>Dana Pembayaran Diambil Dari</label>
-      <select class="fi" id="lunasDari">
-        <option value="KAS">💵 Kas Tunai</option>
-        <option value="BRI">🔵 Saldo BRI</option>
-        <option value="TRF">🟢 Saldo Bank Transfer</option>
-      </select>
-    </div>
-    <div class="fg"><label>Biaya Admin Pinjaman <span class="opt">opsional, ikut dipotong dari sisi pembayaran</span></label>
-      <div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp" id="lunasAdmin" placeholder="0" inputmode="numeric" oninput="fmtMoney2(this)"></div>
-    </div>
-    <div style="font-size:11.5px;color:var(--ink-400);line-height:1.6;margin-bottom:4px">Setelah dikonfirmasi, <b>nominal pinjaman + biaya admin</b> otomatis dikurangi dari sisi yang dipilih — saldo kembali normal seperti sebelum pinjaman.</div>
-    <input type="hidden" id="lunasTs">
-    <div class="md-foot"><button class="btn-cancel" onclick="closeModal('modalLunasPinjam')">Batal</button><button class="btn-ok" onclick="prosesLunasPinjam()">Konfirmasi Lunas</button></div>
   </div>
 </div>
 
@@ -1636,8 +1559,7 @@ function makeResizable(resizerId, panelSelector, minW, maxW){
   });
 }
 makeResizable('resizer', '.sb', 320, () => window.innerWidth * 0.78);
-// Rail resizer dinonaktifkan — sidebar sekarang berbentuk drawer (dibuka lewat tombol garis tiga)
-// makeResizable('railResizer', '.rail', 72, 340);
+makeResizable('railResizer', '.rail', 72, 340);
 </script>
 <script>
 // ══ CUSTOMER DISPLAY (layar transparansi member) ══════════════
@@ -1834,24 +1756,16 @@ function fbConfigKey(){return'bl_firebase_config'}
 function getFirebaseConfig(){try{const r=localStorage.getItem(fbConfigKey());return r?JSON.parse(r):null}catch(e){return null}}
 function setFirebaseConfig(cfg){localStorage.setItem(fbConfigKey(),JSON.stringify(cfg))}
 function clearFirebaseConfig(){localStorage.removeItem(fbConfigKey())}
-let fbApp=null,fbDb=null,_fbAppSeq=0;
+let fbApp=null,fbDb=null;
 function initFirebaseIfPossible(cfg){
   if(typeof firebase==='undefined')return null; // SDK belum/gagal dimuat (mis. sedang offline) — aman, fitur lain tetap jalan
   cfg=cfg||getFirebaseConfig();
   if(!cfg||!cfg.databaseURL)return null;
   try{
-    if(!fbApp){
-      _fbAppSeq++;
-      fbApp=firebase.initializeApp(cfg,'bl_app_'+_fbAppSeq); // named app: bisa dibuat ulang setelah ganti config
-      fbDb=fbApp.database();
-    }
+    if(!fbApp)fbApp=firebase.initializeApp(cfg);
+    if(!fbDb)fbDb=firebase.database();
     return fbDb;
   }catch(e){console.warn('Firebase init gagal:',e);return null}
-}
-function resetFirebaseApp(){
-  // Dipakai saat config diganti/dihapus supaya koneksi lama benar-benar dilepas
-  try{if(fbApp)fbApp.delete()}catch(e){}
-  fbApp=null;fbDb=null;_cloudListenerActive=false;
 }
 function cabangSyncId(){
   // Identitas path di Firebase untuk cabang ini — pakai username akun supaya tiap cabang punya "ruang" sendiri
@@ -1902,36 +1816,6 @@ function removeCloudRecord(kind,key){
   if(!db||!session)return;
   try{db.ref(cloudBase()+'/'+kind+'/'+key).remove()}catch(e){console.warn('Cloud remove record gagal:',e)}
 }
-
-// ══ TOMBSTONE — penanda hapus permanen ═══════════════════════════
-// Masalah tanpa ini: device lain yang masih menyimpan salinan lama (mis. sedang offline
-// saat penghapusan terjadi) akan MENGUNGGAH BALIK data itu ke cloud saat login berikutnya
-// (lewat seedCloudFromLocal) — data yang sudah dihapus "hidup lagi" di semua device.
-// Solusi: setiap penghapusan dicatat sebagai tombstone di cloud & lokal. Data yang sudah
-// ditandai tidak akan pernah di-merge maupun di-seed lagi, di device manapun.
-function getTombstones(){try{return JSON.parse(localStorage.getItem('bl_tombstones')||'{}')}catch(e){return{}}}
-function saveTombstones(t){localStorage.setItem('bl_tombstones',JSON.stringify(t))}
-function addTombstone(kind,key){
-  const t=getTombstones();
-  t[kind]=t[kind]||{};
-  t[kind][key]=Date.now();
-  // jaga ukuran: simpan maksimal 2000 penanda terbaru per jenis
-  const keys=Object.keys(t[kind]);
-  if(keys.length>2000){keys.sort((a,b)=>t[kind][a]-t[kind][b]).slice(0,keys.length-2000).forEach(k=>delete t[kind][k])}
-  saveTombstones(t);
-}
-function isTombstoned(kind,key){const t=getTombstones();return !!(t[kind]&&t[kind][key]!==undefined)}
-function tombstoneAndRemoveCloud(kind,key,meta){
-  addTombstone(kind,key);
-  pushCloudRecord('deleted/'+kind,key,Object.assign({ts:Date.now()},meta||{}));
-  removeCloudRecord(kind,key);
-}
-function applyRemoteTombstone(kind,key,val){
-  if(isTombstoned(kind,key))return;
-  addTombstone(kind,key);
-  if(kind==='members')removeMemberRecordLocal(key);
-  else if(kind==='trx'&&val&&val.tgl)removeTrxRecordLocal(val.tgl,parseInt(key)||val.origTs||key);
-}
 function collectSmallStateForSync(){
   const snap={};
   const singularKeys=['bl_kasfisik_'+session.user,'bl_kasreset_'+session.user];
@@ -1954,46 +1838,17 @@ function scheduleCloudState(){
   _cloudStateTimer=setTimeout(pushCloudState,900);
 }
 
-// ══ SEED — unggah SEMUA data lokal yang sudah ada ke cloud ══════
-// Tanpa ini, transaksi/member yang dicatat SEBELUM sinkron diaktifkan tidak akan
-// pernah naik ke database internet (kode lama hanya mengunggah catatan BARU).
-// Dipanggil saat sinkron pertama kali aktif & setiap login, supaya dua arah penuh:
-// cloud → lokal (tarik) lalu lokal → cloud (unggah), tidak ada data tertinggal.
-function seedCloudFromLocal(){
-  const db=initFirebaseIfPossible();
-  if(!db||!session)return;
-  try{
-    const tomb=getTombstones();
-    const tombHas=(kind,key)=>!!(tomb[kind]&&tomb[kind][key]!==undefined);
-    const updates={};
-    Object.keys(localStorage).forEach(k=>{
-      let kind=null;
-      if(k.indexOf('bl_trx_'+session.user+'_')===0)kind='trx';
-      else if(k.indexOf('bl_pindah_'+session.user+'_')===0)kind='pindah';
-      else if(k.indexOf('bl_pinjam_'+session.user+'_')===0)kind='pinjam';
-      if(!kind)return;
-      try{JSON.parse(localStorage.getItem(k)).forEach(r=>{if(r&&r.ts!=null&&!tombHas(kind,String(r.ts)))updates[kind+'/'+r.ts]=r})}catch(e){}
-    });
-    try{getMembers().forEach(m=>{if(m&&m.id&&!tombHas('members',String(m.id)))updates['members/'+String(m.id).replace(/[.#$\[\]\/]/g,'_')]=m})}catch(e){}
-    try{JSON.parse(localStorage.getItem('bl_audit')||'[]').forEach(l=>{if(l&&l.ts)updates['audit/'+l.ts]=l})}catch(e){}
-    try{JSON.parse(localStorage.getItem('bl_redemptions')||'[]').forEach(r=>{if(r&&r.ts)updates['redeem/'+r.ts]=r})}catch(e){}
-    // sebarkan juga penanda hapus dari device ini ke cloud, supaya device lain ikut menghapus
-    Object.keys(tomb).forEach(kind=>{Object.keys(tomb[kind]).forEach(key=>{updates['deleted/'+kind+'/'+key]={ts:tomb[kind][key]}})});
-    if(Object.keys(updates).length)db.ref(cloudBase()).update(updates).catch(e=>console.warn('Seed cloud gagal:',e));
-    pushCloudState();
-  }catch(e){console.warn('Seed cloud gagal:',e)}
-}
-
 // ══ MERGE — gabungkan catatan yang masuk dari device lain ke data lokal ══
+let _cloudBulkMode=false; // saat true: merge tanpa render ulang tiap record (dipakai saat tarik data awal)
 function mergeTrxRecord(trx){
   if(!trx||!trx.tgl||!trx.ts)return;
-  if(isTombstoned('trx',String(trx.ts))){removeCloudRecord('trx',trx.ts);return} // sudah dihapus permanen — tolak & bersihkan sisa di cloud
   const key='bl_trx_'+session.user+'_'+trx.tgl;
   let arr=JSON.parse(localStorage.getItem(key)||'[]');
   const idx=arr.findIndex(r=>r.ts===trx.ts);
   if(idx>=0)arr[idx]=trx;else arr.push(trx);
   arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
-  localStorage.setItem(key,JSON.stringify(arr));
+  localStorage.setItem(key,JSON.stringify(arr));invalidateScanCache();
+  if(_cloudBulkMode)return;
   if(trx.tgl===todayISO()){data=arr;render();}
   renderKas();
 }
@@ -2001,7 +1856,8 @@ function removeTrxRecordLocal(tgl,ts){
   if(!tgl||!ts)return;
   const key='bl_trx_'+session.user+'_'+tgl;
   let arr=JSON.parse(localStorage.getItem(key)||'[]').filter(r=>r.ts!==ts);
-  localStorage.setItem(key,JSON.stringify(arr));
+  localStorage.setItem(key,JSON.stringify(arr));invalidateScanCache();
+  if(_cloudBulkMode)return;
   if(tgl===todayISO()){data=arr;render();}
   renderKas();
 }
@@ -2012,31 +1868,23 @@ function mergePindahRecord(p){
   const idx=arr.findIndex(r=>r.ts===p.ts);
   if(idx>=0)arr[idx]=p;else arr.push(p);
   arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
-  localStorage.setItem(key,JSON.stringify(arr));
-  renderKas();
-}
-function mergePinjamRecord(p){
-  if(!p||!p.tgl||!p.ts)return;
-  const key='bl_pinjam_'+session.user+'_'+p.tgl;
-  let arr=JSON.parse(localStorage.getItem(key)||'[]');
-  const idx=arr.findIndex(r=>r.ts===p.ts);
-  if(idx>=0)arr[idx]=p;else arr.push(p);
-  arr.sort((a,b)=>(a.ts||0)-(b.ts||0));
-  localStorage.setItem(key,JSON.stringify(arr));
+  localStorage.setItem(key,JSON.stringify(arr));invalidateScanCache();
+  if(_cloudBulkMode)return;
   renderKas();
 }
 function mergeMemberRecord(id,m){
   if(!m)return;
-  if(isTombstoned('members',String(id))){removeCloudRecord('members',id);return} // sudah dihapus permanen — tolak & bersihkan sisa di cloud
   let arr=getMembers();
   const idx=arr.findIndex(x=>x.id===id);
   if(idx>=0)arr[idx]=m;else arr.push(m);
   localStorage.setItem('bl_members_global',JSON.stringify(arr));
+  if(_cloudBulkMode)return;
   renderMembers();
 }
 function removeMemberRecordLocal(id){
   const arr=getMembers().filter(x=>x.id!==id);
   localStorage.setItem('bl_members_global',JSON.stringify(arr));
+  if(_cloudBulkMode)return;
   renderMembers();
 }
 function mergeAuditRecord(entry){
@@ -2047,6 +1895,7 @@ function mergeAuditRecord(entry){
     logs.sort((a,b)=>(a.ts||0)-(b.ts||0));
     if(logs.length>2000)logs=logs.slice(logs.length-2000);
     localStorage.setItem('bl_audit',JSON.stringify(logs));
+    if(_cloudBulkMode)return;
     if(document.getElementById('pageAdmin')&&document.getElementById('pageAdmin').classList.contains('active'))renderAuditLog();
   }
 }
@@ -2069,16 +1918,11 @@ function startCloudSyncListener(){
   db.ref(base+'/trx').on('child_removed',snap=>{const v=snap.val();if(v)removeTrxRecordLocal(v.tgl,v.ts)});
   db.ref(base+'/pindah').on('child_added',snap=>mergePindahRecord(snap.val()));
   db.ref(base+'/pindah').on('child_changed',snap=>mergePindahRecord(snap.val()));
-  db.ref(base+'/pinjam').on('child_added',snap=>mergePinjamRecord(snap.val()));
-  db.ref(base+'/pinjam').on('child_changed',snap=>mergePinjamRecord(snap.val()));
   db.ref(base+'/members').on('child_added',snap=>mergeMemberRecord(snap.key,snap.val()));
   db.ref(base+'/members').on('child_changed',snap=>mergeMemberRecord(snap.key,snap.val()));
   db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
   db.ref(base+'/audit').on('child_added',snap=>mergeAuditRecord(snap.val()));
   db.ref(base+'/redeem').on('child_added',snap=>mergeRedeemRecord(snap.val()));
-  // penanda hapus dari device lain → langsung hapus di sini juga, permanen
-  db.ref(base+'/deleted/members').on('child_added',snap=>applyRemoteTombstone('members',snap.key,snap.val()));
-  db.ref(base+'/deleted/trx').on('child_added',snap=>applyRemoteTombstone('trx',snap.key,snap.val()));
   db.ref(cloudStatePath()).on('value',snap=>{
     const val=snap.val();
     if(!val||!val.data)return;
@@ -2099,42 +1943,50 @@ function tryStartCloudSync(onDone,tries){
   const db=initFirebaseIfPossible(cfg);
   if(!db){onDone();return}
   toast('🔄 Menyinkronkan data dari cloud...','ok');
-  db.ref(cloudBase()).once('value').then(snap=>{
-    const val=snap.val()||{};
-    // Proses penanda hapus DULU — supaya data yang sudah dihapus device lain
-    // langsung tercatat & tidak ikut ter-merge di langkah berikutnya
-    if(val.deleted){
-      if(val.deleted.members)Object.keys(val.deleted.members).forEach(id=>applyRemoteTombstone('members',id,val.deleted.members[id]));
-      if(val.deleted.trx)Object.keys(val.deleted.trx).forEach(ts=>applyRemoteTombstone('trx',ts,val.deleted.trx[ts]));
-    }
-    if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
-    if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
-    if(val.pinjam)Object.values(val.pinjam).forEach(mergePinjamRecord);
-    if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
-    if(val.audit)Object.values(val.audit).forEach(mergeAuditRecord);
-    if(val.redeem)Object.values(val.redeem).forEach(mergeRedeemRecord);
-    if(val.state&&val.state.data){
-      Object.keys(val.state.data).forEach(k=>localStorage.setItem(k,val.state.data[k]));
-      _lastStatePushTs=val.state.ts||Date.now();
-    }
+  // PENGAMAN ANTI-FREEZE: apapun yang terjadi, aplikasi WAJIB lanjut dalam maks 6 detik.
+  // Kalau tarik-data dari cloud lambat/nyangkut, kita lanjut pakai data lokal dulu, dan
+  // biarkan sinkron jalan di latar belakang (listener) begitu datanya akhirnya sampai.
+  let done=false;
+  const proceed=(fromTimeout)=>{
+    if(done)return;done=true;
+    if(fromTimeout)toast('⚠️ Koneksi cloud lambat — lanjut pakai data lokal, sinkron jalan di belakang','err');
     onDone();
     startCloudSyncListener();
-    seedCloudFromLocal(); // unggah balik data lokal yang belum ada di cloud — sinkron dua arah penuh
-    watchFbConnected();
-  }).catch(err=>{console.warn('Cloud initial load gagal:',err);onDone();startCloudSyncListener();watchFbConnected()});
+  };
+  const guard=setTimeout(()=>proceed(true),6000);
+  db.ref(cloudBase()).once('value').then(snap=>{
+    const val=snap.val()||{};
+    try{
+      _cloudBulkMode=true; // matikan render-per-record dulu supaya tidak freeze
+      if(val.trx)Object.values(val.trx).forEach(mergeTrxRecord);
+      if(val.pindah)Object.values(val.pindah).forEach(mergePindahRecord);
+      if(val.members)Object.keys(val.members).forEach(id=>mergeMemberRecord(id,val.members[id]));
+      if(val.audit)Object.values(val.audit).forEach(mergeAuditRecord);
+      if(val.redeem)Object.values(val.redeem).forEach(mergeRedeemRecord);
+      if(val.state&&val.state.data){
+        Object.keys(val.state.data).forEach(k=>localStorage.setItem(k,val.state.data[k]));
+        _lastStatePushTs=val.state.ts||Date.now();
+      }
+    }catch(e){console.warn('Merge cloud data error:',e)}
+    finally{_cloudBulkMode=false}
+    clearTimeout(guard);proceed(false);
+  }).catch(err=>{console.warn('Cloud initial load gagal:',err);clearTimeout(guard);proceed(false)});
 }
 // Dipakai saat login gagal secara lokal — mungkin akun ini baru dibuat di device lain,
 // jadi coba tarik daftar akun terbaru dari cloud sebelum menyerah.
 function pullAccountsForLogin(user,callback){
   const db=initFirebaseIfPossible();
   if(!db){callback&&callback(false);return}
+  let done=false;
+  const finish=(ok)=>{if(done)return;done=true;callback&&callback(ok)};
+  setTimeout(()=>finish(false),5000); // jangan sampai login nyangkut kalau cloud lambat
   db.ref(cloudStatePath(user)).once('value').then(snap=>{
     const val=snap.val();
     if(val&&val.data&&val.data['bl_accounts']){
       localStorage.setItem('bl_accounts',val.data['bl_accounts']);
     }
-    callback&&callback(true);
-  }).catch(()=>callback&&callback(false));
+    finish(true);
+  }).catch(()=>finish(false));
 }
 
 // ══ RENDER (dijalankan di jendela Layar Customer) ══════════════
@@ -2449,26 +2301,20 @@ function checkAutoBackup(){
       toast('💾 Backup otomatis tersimpan — pastikan folder unduhan sudah ter-sync ke Google Drive','ok');
     },2200);
   }
+  // Peringatan dini kalau penyimpanan browser hampir penuh (khusus untuk pemakaian jangka panjang).
+  // Catatan: TIDAK ADA proses arsip/hapus otomatis diam-diam. Data transaksi setiap cabang
+  // sudah otomatis tersimpan permanen di cloud (Firebase) sejak awal — jadi kalaupun
+  // penyimpanan lokal browser penuh, data TIDAK hilang, cuma perlu dibersihkan manual
+  // sesekali dari Panel Admin kalau memang mulai penuh (tidak wajib, cuma kalau perlu).
+  try{
+    const pct=Math.round(estimateStorageUsage()/1048576/5*100);
+    if(pct>=85)setTimeout(()=>toast('⚠️ Penyimpanan hampir penuh ('+pct+'%). Data aman di cloud — buka Panel Admin untuk bersihkan penyimpanan lokal kalau perlu','err'),3400);
+  }catch(e){}
 }
 
 // ══ PAGES ══════════════════════════════════════
-// ══ SIDEBAR DRAWER (garis tiga) ═════════════════
-function toggleRail(){
-  const r=document.getElementById('railDrawer');
-  if(r.classList.contains('open'))closeRail();else openRail();
-}
-function openRail(){
-  document.getElementById('railDrawer').classList.add('open');
-  document.getElementById('railBackdrop').classList.add('show');
-}
-function closeRail(){
-  document.getElementById('railDrawer').classList.remove('open');
-  document.getElementById('railBackdrop').classList.remove('show');
-}
-
 function showPage(p){
   if(p==='admin'&&(!session||session.role!=='admin')){toast('Halaman ini khusus untuk Admin','err');return}
-  closeRail();
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(el=>el.classList.remove('active'));
   const key=p.charAt(0).toUpperCase()+p.slice(1);
@@ -2477,7 +2323,7 @@ function showPage(p){
   if(p==='member')renderMembers();
   if(p==='kas')renderKas();
   if(p==='laporan')renderLaporan();
-  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();renderFeeRules();}
+  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();renderStorageHealth();}
 }
 
 // ══ MEMBER DB ══════════════════════════════════
@@ -2541,17 +2387,10 @@ function loadData(){
   sel.innerHTML='<option value="">Semua jenis</option>';
   jenisList.forEach(j=>{const o=document.createElement('option');o.value=j.label;o.textContent=j.label;sel.appendChild(o)});
 }
-function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data))}
+function saveData(){localStorage.setItem(storageKey(),JSON.stringify(data));invalidateScanCache()}
 function getCounter(){return parseInt(localStorage.getItem(counterKey())||'0')}
 function setCounter(n){localStorage.setItem(counterKey(),String(n))}
-// FIX: nomor transaksi dihitung langsung dari data yang ada (nomor tertinggi + 1),
-// bukan dari counter terpisah — supaya selalu pas walau ada sinkron cloud / hapus transaksi.
-function nextTrxNumber(){
-  let max=0;
-  data.forEach(r=>{const m=String(r.no||'').match(/(\d+)\s*$/);if(m){const n=parseInt(m[1],10);if(n>max)max=n}});
-  return max+1;
-}
-function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(nextTrxNumber()).padStart(3,'0')}
+function updateNoTrx(){document.getElementById('mNoTrx').textContent='TRX-'+String(getCounter()+1).padStart(3,'0')}
 
 // ══ AUDIT LOG ══════════════════════════════════
 function logAudit(aksi,detail){
@@ -2564,11 +2403,7 @@ function logAudit(aksi,detail){
 }
 
 // ══ SETTINGS (global, cross-branch) ════════════
-function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;
-  // Auto fee agen: aturan berjenjang berdasarkan nominal (bisa diedit di Panel Admin). max=0 artinya "di atas semua tingkat".
-  if(s.feeAutoOn===undefined)s.feeAutoOn=true;
-  if(!Array.isArray(s.feeRules)||!s.feeRules.length)s.feeRules=[{max:1000000,fee:5000},{max:5000000,fee:10000},{max:10000000,fee:15000},{max:0,fee:20000}];
-  return s}
+function getSettings(){const r=localStorage.getItem('bl_settings');const s=r?JSON.parse(r):{};if(s.limitTarikTunai===undefined)s.limitTarikTunai=(s.limitTarikHarian!==undefined?s.limitTarikHarian:25000000);if(s.limitTransfer===undefined)s.limitTransfer=25000000;return s}
 function saveSettings(s){localStorage.setItem('bl_settings',JSON.stringify(s));scheduleCloudState()}
 
 // ══ KAS FISIK & SALDO CHANNEL (BRI / Bank Transfer) ════════
@@ -2620,27 +2455,36 @@ function setSaldoResetAt(ch,ts){localStorage.setItem(saldoResetKey(ch),String(ts
 function isAdmin(){return!!(session&&session.role==='admin')}
 
 // Scan seluruh riwayat transaksi/pemindahan milik user ini lintas hari (untuk hitung saldo berjalan)
+// Cache hasil scan supaya tidak parse ulang seluruh localStorage berkali-kali dalam satu
+// render (renderKas + preview + cek limit bisa memanggil hitungKas beberapa kali beruntun).
+// Cache otomatis dibatalkan tiap kali ada transaksi/pemindahan baru disimpan.
+let _scanTrxCache=null,_scanPindahCache=null,_scanCacheUser=null;
+function invalidateScanCache(){_scanTrxCache=null;_scanPindahCache=null}
 function scanAllTrxForUser(){
+  if(_scanTrxCache&&_scanCacheUser===session.user)return _scanTrxCache;
   const prefix='bl_trx_'+session.user+'_';
   const rows=[];
   Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
     try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
   });
+  _scanTrxCache=rows;_scanCacheUser=session.user;
   return rows;
 }
 function scanAllPindahForUser(){
+  if(_scanPindahCache&&_scanCacheUser===session.user)return _scanPindahCache;
   const prefix='bl_pindah_'+session.user+'_';
   const rows=[];
   Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
     try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
   });
+  _scanPindahCache=rows;_scanCacheUser=session.user;
   return rows;
 }
 
 // ══ PEMINDAHAN SALDO (manual: Kas ⇄ Saldo BRI ⇄ Saldo Bank Transfer) ═
 function pindahKey(){return'bl_pindah_'+session.user+'_'+todayISO()}
 function getPindahList(){const r=localStorage.getItem(pindahKey());return r?JSON.parse(r):[]}
-function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a))}
+function savePindahList(a){localStorage.setItem(pindahKey(),JSON.stringify(a));invalidateScanCache()}
 function labelSisi(k){return k==='KAS'?'Kas Tunai':(CHANNEL_META[k]?CHANNEL_META[k].full:k)}
 function prosesPindah(){
   const dari=document.getElementById('pindahDari').value;
@@ -2658,67 +2502,6 @@ function prosesPindah(){
   logAudit('PEMINDAHAN_SALDO',labelSisi(dari)+' → '+labelSisi(ke)+' sebesar '+fmtRp(nominal)+(adminFee?' (biaya admin '+fmtRp(adminFee)+')':'')+(ket?' · '+ket:''));
   closeModal('modalPindah');renderKas();
   toast('✓ Pemindahan saldo berhasil dicatat','ok');
-}
-
-// ══ PINJAMAN (dana pinjaman masuk → otomatis menambah total saldo keseluruhan) ═
-function pinjamKey(){return'bl_pinjam_'+session.user+'_'+todayISO()}
-function getPinjamList(){const r=localStorage.getItem(pinjamKey());return r?JSON.parse(r):[]}
-function savePinjamList(a){localStorage.setItem(pinjamKey(),JSON.stringify(a))}
-function scanAllPinjamForUser(){
-  const prefix='bl_pinjam_'+session.user+'_';
-  const rows=[];
-  Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
-    try{JSON.parse(localStorage.getItem(k)).forEach(r=>rows.push(r))}catch(e){}
-  });
-  return rows;
-}
-function openPinjaman(){
-  document.getElementById('pinjamKe').value='KAS';
-  document.getElementById('pinjamNominal').value='';
-  document.getElementById('pinjamPemberi').value='';
-  document.getElementById('pinjamKet').value='';
-  openModal('modalPinjaman');
-}
-function prosesPinjaman(){
-  const ke=document.getElementById('pinjamKe').value;
-  const nominal=parseInt((document.getElementById('pinjamNominal').value||'0').replace(/\D/g,''))||0;
-  const pemberi=document.getElementById('pinjamPemberi').value.trim();
-  const ket=document.getElementById('pinjamKet').value.trim();
-  if(!nominal||nominal<=0){toast('Masukkan nominal pinjaman yang valid','err');return}
-  const list=getPinjamList();
-  const record={id:'PJ-'+Date.now(),tgl:todayISO(),waktu:nowTime(),ts:Date.now(),ke,nominal,pemberi,ket,oleh:session.nama};
-  list.push(record);
-  savePinjamList(list);
-  pushCloudRecord('pinjam',record.ts,record);
-  logAudit('PINJAMAN',fmtRp(nominal)+' masuk ke '+labelSisi(ke)+(pemberi?' dari '+pemberi:'')+(ket?' · '+ket:''));
-  closeModal('modalPinjaman');renderKas();
-  toast('✓ Pinjaman '+fmtRp(nominal)+' tercatat, saldo bertambah','ok');
-}
-function openLunasPinjam(ts){
-  const p=getPinjamList().find(r=>r.ts===ts);
-  if(!p){toast('Data pinjaman tidak ditemukan','err');return}
-  if(p.lunas){toast('Pinjaman ini sudah lunas','err');return}
-  document.getElementById('lunasInfo').innerHTML='Pinjaman <b>'+fmtRp(p.nominal)+'</b>'+(p.pemberi?' dari <b>'+p.pemberi+'</b>':'')+' (masuk ke '+labelSisi(p.ke)+') akan ditandai sudah dibayar / dikembalikan.';
-  document.getElementById('lunasDari').value=p.ke; // default: bayar dari sisi tempat dana masuk
-  document.getElementById('lunasAdmin').value='';
-  document.getElementById('lunasTs').value=String(ts);
-  openModal('modalLunasPinjam');
-}
-function prosesLunasPinjam(){
-  const ts=parseInt(document.getElementById('lunasTs').value)||0;
-  const dari=document.getElementById('lunasDari').value;
-  const list=getPinjamList();
-  const idx=list.findIndex(r=>r.ts===ts);
-  if(idx<0){toast('Data pinjaman tidak ditemukan','err');return}
-  const p=list[idx];
-  if(p.lunas){toast('Pinjaman ini sudah lunas','err');return}
-  const lunasAdmin=parseInt((document.getElementById('lunasAdmin').value||'0').replace(/\D/g,''))||0;
-  p.lunas=true;p.lunasTs=Date.now();p.lunasDari=dari;p.lunasAdmin=lunasAdmin;p.lunasWaktu=nowTime();p.lunasOleh=session.nama;
-  list[idx]=p;savePinjamList(list);
-  pushCloudRecord('pinjam',p.ts,p);
-  logAudit('PELUNASAN_PINJAMAN','Pinjaman '+fmtRp(p.nominal)+(p.pemberi?' dari '+p.pemberi:'')+' dilunasi — dana dibayar dari '+labelSisi(dari)+(lunasAdmin?' (biaya admin '+fmtRp(lunasAdmin)+')':''));
-  closeModal('modalLunasPinjam');renderKas();
-  toast('✓ Pinjaman lunas, saldo kembali normal','ok');
 }
 
 function hitungKas(excludeTs){
@@ -2773,22 +2556,6 @@ function hitungKas(excludeTs){
     if(p.ke==='KAS'){if(ts>kasResetAt)kasPlus+=p.nominal;}
     else if(saldo[p.ke]&&ts>saldoResetAt[p.ke])saldo[p.ke].plus+=p.nominal;
   });
-
-  // Pinjaman: dana pinjaman masuk → menambah sisi tujuan, sehingga total saldo keseluruhan ikut bertambah.
-  // Kalau sudah LUNAS: nominal dikurangi kembali dari sisi pembayaran → saldo kembali normal.
-  scanAllPinjamForUser().forEach(p=>{
-    if(excludeTs&&p.ts===excludeTs)return;
-    const ts=p.ts||1;
-    if(p.ke==='KAS'){if(ts>kasResetAt)kasPlus+=p.nominal;}
-    else if(saldo[p.ke]&&ts>saldoResetAt[p.ke])saldo[p.ke].plus+=p.nominal;
-    if(p.lunas){
-      const lts=p.lunasTs||ts;
-      const src=p.lunasDari||p.ke;
-      const bayar=p.nominal+(p.lunasAdmin||0); // nominal + biaya admin pinjaman
-      if(src==='KAS'){if(lts>kasResetAt)kasMinus+=bayar;}
-      else if(saldo[src]&&lts>saldoResetAt[src])saldo[src].minus+=bayar;
-    }
-  });
   CHANNELS.forEach(ch=>{saldo[ch].akhir=saldo[ch].awal+saldo[ch].plus-saldo[ch].minus});
   const kasAkhir=kasAwal+kasPlus-kasMinus;
   let totalSaldoKeseluruhan=kasAkhir;
@@ -2835,25 +2602,6 @@ function renderKas(){
       </div>
       <div class="hist-r"><div class="hist-nom">${fmtRp(p.nominal)}</div></div>
     </div>`).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">🔁</span>Belum ada pemindahan saldo hari ini</div>';
-  }
-
-  const pinjamList=getPinjamList().slice().reverse();
-  const pinjamEl=document.getElementById('pinjamHistList');
-  if(pinjamEl){
-    pinjamEl.innerHTML=pinjamList.length?pinjamList.map(p=>`<div class="hist-row">
-      <div class="hist-ic">${p.lunas?'✅':'💳'}</div>
-      <div class="hist-l">
-        <div class="hist-no">${p.waktu} · ${p.oleh}</div>
-        <div class="hist-jns">Pinjaman → ${labelSisi(p.ke)} ${p.lunas?'<span style="background:var(--emerald-lt,#d1fae5);color:var(--emerald-600,#059669);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.05em">LUNAS</span>':''}</div>
-        ${p.pemberi?`<div class="hist-tgl">Dari: ${p.pemberi}</div>`:''}
-        ${p.ket?`<div class="hist-tgl">${p.ket}</div>`:''}
-        ${p.lunas?`<div class="hist-tgl">Dilunasi ${p.lunasWaktu||''} oleh ${p.lunasOleh||'-'} · dibayar dari ${labelSisi(p.lunasDari||p.ke)}${p.lunasAdmin?' · biaya admin '+fmtRp(p.lunasAdmin):''}</div>`:''}
-      </div>
-      <div class="hist-r">
-        <div class="hist-nom" style="color:${p.lunas?'var(--ink-400)':'var(--emerald-600)'}">${p.lunas?'':'+ '}${fmtRp(p.nominal)}</div>
-        ${p.lunas?'':`<button class="btn-primary" style="padding:5px 10px;font-size:10.5px;margin-top:5px" onclick="openLunasPinjam(${p.ts})">✓ Sudah Dibayar</button>`}
-      </div>
-    </div>`).join(''):'<div class="empty" style="padding:24px"><span class="empty-ic">💳</span>Belum ada pinjaman hari ini</div>';
   }
 }
 function openPindahSaldo(){
@@ -2921,31 +2669,6 @@ function fmtMoney(inp){
   inp.value=raw?parseInt(raw,10).toLocaleString('id-ID'):'';
   updatePreview();
 }
-
-// ══ AUTO FEE AGEN ══════════════════════════════
-// Hitung fee agen otomatis dari aturan berjenjang di pengaturan (bisa diedit Admin).
-function calcAutoFee(nominal){
-  const s=getSettings();
-  if(!s.feeAutoOn||!nominal||nominal<=0)return null;
-  const rules=(s.feeRules||[]).slice().sort((a,b)=>{
-    const am=a.max||0,bm=b.max||0;
-    if(am===0)return 1;if(bm===0)return -1;return am-bm; // max=0 (tanpa batas) selalu terakhir
-  });
-  for(const r of rules){
-    if(r.max===0||nominal<=r.max)return r.fee||0;
-  }
-  return null;
-}
-// Dipanggil setiap kasir mengetik nominal transaksi → kolom Fee Agen langsung terisi otomatis.
-// Kasir tetap bisa mengubah fee secara manual setelahnya kalau perlu.
-function autoFeeFromNominal(){
-  const nom=parseMoney('fNominal');
-  const fee=calcAutoFee(nom);
-  const el=document.getElementById('fFee');
-  if(fee===null){if(!nom)el.value='';updatePreview();return}
-  el.value=fee?fee.toLocaleString('id-ID'):'';
-  updatePreview();
-}
 function parseMoney(inp){return parseInt((document.getElementById(inp).value||'0').replace(/\./g,'').replace(/,/g,''))||0}
 function fmtRp(n){return'Rp '+Math.round(n||0).toLocaleString('id-ID')}
 function fmtMoney2(inp){const raw=inp.value.replace(/\D/g,'');inp.value=raw?parseInt(raw,10).toLocaleString('id-ID'):''}
@@ -3004,46 +2727,12 @@ function toggleRfidInput(){
   row.style.display=row.style.display==='none'?'flex':'none';
   if(row.style.display==='flex')setTimeout(()=>document.getElementById('rfidQ').focus(),50);
 }
-function findMembersByQuery(q){
-  const ql=q.toLowerCase();
-  return getMembers().filter(m=>
-    (m.rfid&&m.rfid.toLowerCase()===ql)||
-    (m.hp&&m.hp.replace(/\D/g,'').includes(q.replace(/\D/g,''))&&q.replace(/\D/g,'').length>=3)||
-    (m.nama&&m.nama.toLowerCase().includes(ql))
-  );
-}
-function renderRfidResults(matches){
-  const box=document.getElementById('rfidResults');
-  if(!matches.length){box.style.display='none';box.innerHTML='';return}
-  box.style.display='flex';
-  box.innerHTML=matches.slice(0,6).map(m=>{
-    const tier=getTier(m.poin);
-    return`<div onclick="pickMemberFromSearch('${m.id}')" style="background:var(--paper-50);border:1.5px solid var(--ink-200);border-radius:var(--r-sm);padding:9px 11px;display:flex;align-items:center;gap:9px;cursor:pointer" onmouseover="this.style.borderColor='var(--violet-500)'" onmouseout="this.style.borderColor='var(--ink-200)'">
-      <div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--violet-600),var(--violet-500));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${(m.nama||'?').charAt(0).toUpperCase()}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12.5px;color:var(--ink-950);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.nama}</div><div style="font-size:10px;color:var(--ink-400)">${m.hp||'tanpa No. HP'} · ⭐ ${m.poin||0} · ${tier}</div></div>
-    </div>`;
-  }).join('')+(matches.length>6?`<div style="font-size:10.5px;color:var(--ink-400);text-align:center">+${matches.length-6} member lain — perjelas kata kunci</div>`:'');
-}
-function searchRfidLive(){
-  const q=document.getElementById('rfidQ').value.trim();
-  if(q.length<2){renderRfidResults([]);return}
-  renderRfidResults(findMembersByQuery(q));
-}
-function pickMemberFromSearch(id){
-  const m=getMembers().find(x=>x.id===id);
-  if(!m)return;
-  applyRfid(m);
-  document.getElementById('rfidQ').value='';
-  renderRfidResults([]);
-}
 function searchRfid(){
   const q=document.getElementById('rfidQ').value.trim();
   if(!q)return;
-  const matches=findMembersByQuery(q);
-  if(!matches.length){toast('Member tidak ditemukan — coba nama atau No. HP lain','err');renderRfidResults([]);return}
-  if(matches.length===1){pickMemberFromSearch(matches[0].id);return}
-  renderRfidResults(matches);
-  toast('Ditemukan '+matches.length+' member, pilih salah satu','ok');
+  const m=getMemberByRfid(q)||getMemberByHp(q);
+  if(m){applyRfid(m);document.getElementById('rfidQ').value='';}
+  else{toast('Member tidak ditemukan dalam database','err');}
 }
 function applyRfid(m){
   currentRfid=m;
@@ -3051,7 +2740,6 @@ function applyRfid(m){
   z.classList.remove('scanning');z.classList.add('found');
   document.getElementById('rfidDefault').style.display='none';
   document.getElementById('rfidSearchRow').style.display='none';
-  const rr=document.getElementById('rfidResults');if(rr){rr.style.display='none';rr.innerHTML='';}
   const found=document.getElementById('rfidFound');found.style.display='block';
   document.getElementById('rfidAv').textContent=m.nama.charAt(0).toUpperCase();
   document.getElementById('rfidName').textContent=m.nama;
@@ -3068,7 +2756,6 @@ function clearRfid(e){
   const z=document.getElementById('rfidZone');
   z.classList.remove('found','scanning');
   document.getElementById('rfidDefault').style.display='flex';
-  const rr2=document.getElementById('rfidResults');if(rr2){rr2.style.display='none';rr2.innerHTML='';}
   document.getElementById('rfidFound').style.display='none';
   document.getElementById('rfidSearchRow').style.display='none';
   document.getElementById('fNama').value='';document.getElementById('fHP').value='';
@@ -3243,7 +2930,7 @@ function commitTransaksi(payload){
   }
 
   // ═ CREATE MODE ═
-  const ctr=nextTrxNumber();setCounter(ctr);
+  const ctr=getCounter()+1;setCounter(ctr);
   const noTrx='TRX-'+String(ctr).padStart(3,'0');
   const poin=currentRfid?calcPts(nominal):0;
   const trx={
@@ -3348,7 +3035,7 @@ function render(){
   }
   document.getElementById('tblCount').textContent=filtered.length+' transaksi';
   document.getElementById('trxPager').innerHTML=renderPagerHtml(trxPage,totalPages,'goTrxPage');
-  updateNoTrx(); // selalu segarkan nomor transaksi berikutnya sesuai data terkini
+  renderStats(filtered);
 }
 function hapus(idx){
   const r=data[idx];if(!r)return;
@@ -3367,9 +3054,19 @@ function hapus(idx){
     }
   }
   logAudit('HAPUS_TRANSAKSI',r.no+' · '+r.jenis+' · '+fmtRp(r.nominal)+' · Alasan: '+reason.trim());
-  data.splice(idx,1);saveData();tombstoneAndRemoveCloud('trx',r.ts,{tgl:r.tgl});render();renderKas();toast('Transaksi dihapus')
+  data.splice(idx,1);saveData();removeCloudRecord('trx',r.ts);render();renderKas();toast('Transaksi dihapus')
 }
 
+function renderStats(filtered){
+  const totNom=filtered.reduce((a,r)=>a+r.nominal,0);
+  const totAdm=filtered.reduce((a,r)=>a+r.admin,0);
+  const totFee=filtered.reduce((a,r)=>a+r.fee,0);
+  document.getElementById('statsRow').innerHTML=`
+    <div class="sc blue"><div class="sc-inner"><div><div class="sc-lbl">Total transaksi</div><div class="sc-num">${filtered.length}</div><div class="sc-sub">tersimpan</div></div><div class="sc-icon" style="background:var(--blue-lt)">🧾</div></div></div>
+    <div class="sc green"><div class="sc-inner"><div><div class="sc-lbl">Total nominal</div><div class="sc-num" style="font-size:17px">${fmtRp(totNom)}</div><div class="sc-sub">nilai transaksi</div></div><div class="sc-icon" style="background:var(--emerald-lt)">💰</div></div></div>
+    <div class="sc amber"><div class="sc-inner"><div><div class="sc-lbl">Total biaya admin</div><div class="sc-num" style="font-size:17px">${fmtRp(totAdm)}</div><div class="sc-sub">dari customer</div></div><div class="sc-icon" style="background:var(--amber-lt)">📋</div></div></div>
+    <div class="sc purple"><div class="sc-inner"><div><div class="sc-lbl">Total fee agen</div><div class="sc-num" style="font-size:17px;color:var(--emerald-600)">${fmtRp(totFee)}</div><div class="sc-sub">keuntungan agen</div></div><div class="sc-icon" style="background:var(--violet-lt)">✅</div></div></div>`;
+}
 
 // ══ MEMBER CRUD ═════════════════════════════════
 function openAddMember(){
@@ -3385,8 +3082,8 @@ function openEditMember(id){
   document.getElementById('modalMemberTitle').textContent='Edit Data Member';
   document.getElementById('editMemberId').value=id;
   document.getElementById('mNama').value=m.nama;
-  document.getElementById('mHp').value=m.hp||'';
-  document.getElementById('mRfid').value=m.rfid||genRfid();
+  document.getElementById('mHp').value=m.hp;
+  document.getElementById('mRfid').value=m.rfid;
   document.getElementById('mTglLahir').value=m.tglLahir||'';
   document.getElementById('mAlamat').value=m.alamat||'';
   document.getElementById('mPoin').value=m.poin||0;
@@ -3395,16 +3092,16 @@ function openEditMember(id){
 function saveMember(){
   const nama=document.getElementById('mNama').value.trim();
   const hp=document.getElementById('mHp').value.trim();
-  let rfid=document.getElementById('mRfid').value.trim();
+  const rfid=document.getElementById('mRfid').value.trim();
   const poin=parseInt(document.getElementById('mPoin').value)||0;
   if(!nama){toast('Nama tidak boleh kosong','err');return}
-  // No. HP tidak wajib — hanya divalidasi kalau memang diisi
-  if(hp&&!/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
-  if(!rfid){rfid=genRfid();document.getElementById('mRfid').value=rfid} // ID Kartu dibuat otomatis
+  if(!hp){toast('No. HP tidak boleh kosong','err');return}
+  if(!/^0\d{8,14}$/.test(hp.replace(/[-\s.]/g,''))){toast('Format No. HP tidak valid, contoh: 08123456789','err');return}
+  if(!rfid){toast('ID Kartu RFID tidak boleh kosong','err');return}
   const members=getMembers();
   const editId=document.getElementById('editMemberId').value;
   if(members.find(m=>m.rfid===rfid&&m.id!==editId)){toast('ID Kartu sudah digunakan member lain','err');return}
-  if(hp&&members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
+  if(members.find(m=>m.hp===hp&&m.id!==editId)){toast('No. HP sudah terdaftar member lain','err');return}
   let savedId=editId;
   if(editId){
     const idx=members.findIndex(m=>m.id===editId);
@@ -3423,7 +3120,7 @@ function saveMember(){
 function deleteMember(id){
   const m=getMemberById(id);if(!m)return;
   if(!confirm('Hapus member '+m.nama+'?'))return;
-  saveMembers(getMembers().filter(x=>x.id!==id));tombstoneAndRemoveCloud('members',id);renderMembers();toast('Member dihapus');
+  saveMembers(getMembers().filter(x=>x.id!==id));removeCloudRecord('members',id);renderMembers();toast('Member dihapus');
 }
 function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
 function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
@@ -3512,7 +3209,7 @@ function renderMembers(){
   const q=(document.getElementById('mSearch').value||'').toLowerCase();
   const tf=document.getElementById('mTier').value;
   let members=getMembers();
-  if(q)members=members.filter(m=>(m.nama||'').toLowerCase().includes(q)||(m.hp||'').includes(q));
+  if(q)members=members.filter(m=>m.nama.toLowerCase().includes(q)||m.hp.includes(q)||m.rfid.toLowerCase().includes(q));
   if(tf)members=members.filter(m=>getTier(m.poin)===tf);
   const grid=document.getElementById('memberGrid');
   if(!members.length){
@@ -3542,7 +3239,7 @@ function renderMembers(){
         </div>
       </div>
       <div class="mc-body">
-        <div class="mc-row"><span class="mc-rl">No. HP</span><span class="mc-rv">${m.hp||'—'}</span></div>
+        <div class="mc-row"><span class="mc-rl">No. HP</span><span class="mc-rv">${m.hp}</span></div>
         <div class="mc-row"><span class="mc-rl">ID Kartu</span><span class="mc-rv"><span class="rfid-pill">${m.rfid}</span></span></div>
         <div class="mc-row"><span class="mc-rl">Total poin</span><span class="mc-rv pts">⭐ ${(m.poin||0).toLocaleString('id-ID')}</span></div>
         <div class="mc-row"><span class="mc-rl">Hadiah tier ini</span><span class="mc-rv" style="color:var(--gold-600)">🎁 ${tierRewardText(tier)}</span></div>
@@ -3737,50 +3434,6 @@ function saveLimitSetting(){
   toast('✓ Pengaturan disimpan','ok');renderKas();
 }
 
-// ══ ADMIN — ATURAN AUTO FEE AGEN ═══════════════
-function renderFeeRules(){
-  const s=getSettings();
-  const cb=document.getElementById('feeAutoOn');if(cb)cb.checked=!!s.feeAutoOn;
-  const body=document.getElementById('feeRulesBody');if(!body)return;
-  body.innerHTML=(s.feeRules||[]).map((r,i)=>`<tr>
-    <td><div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp fee-rule-max" placeholder="tanpa batas" inputmode="numeric" value="${r.max?r.max.toLocaleString('id-ID'):''}" oninput="fmtMoney2(this)"></div></td>
-    <td><div class="money-wrap"><div class="money-pre">Rp</div><input class="fi money-inp fee-rule-fee" placeholder="0" inputmode="numeric" value="${r.fee?r.fee.toLocaleString('id-ID'):''}" oninput="fmtMoney2(this)"></div></td>
-    <td><button class="del" onclick="delFeeRule(${i})" title="Hapus tingkat">✕</button></td>
-  </tr>`).join('');
-}
-function collectFeeRulesFromUI(){
-  const rows=[];
-  const maxes=document.querySelectorAll('.fee-rule-max');
-  const fees=document.querySelectorAll('.fee-rule-fee');
-  maxes.forEach((m,i)=>{
-    const max=parseInt((m.value||'0').replace(/\D/g,''))||0;
-    const fee=parseInt((fees[i].value||'0').replace(/\D/g,''))||0;
-    rows.push({max,fee});
-  });
-  return rows;
-}
-function addFeeRule(){
-  const s=getSettings();
-  s.feeRules=collectFeeRulesFromUI();
-  s.feeRules.push({max:0,fee:0});
-  saveSettings(s);renderFeeRules();
-}
-function delFeeRule(i){
-  const s=getSettings();
-  const rules=collectFeeRulesFromUI();
-  rules.splice(i,1);
-  s.feeRules=rules;
-  saveSettings(s);renderFeeRules();
-}
-function saveFeeRules(fromToggle){
-  const s=getSettings();
-  s.feeAutoOn=document.getElementById('feeAutoOn').checked;
-  s.feeRules=collectFeeRulesFromUI();
-  saveSettings(s);
-  logAudit('UBAH_PENGATURAN','Aturan auto fee agen diubah — '+(s.feeAutoOn?'AKTIF':'NONAKTIF')+' · '+s.feeRules.map(r=>(r.max?('≤'+fmtRp(r.max)):'di atasnya')+'→'+fmtRp(r.fee)).join(', '));
-  toast(fromToggle?('Auto fee agen '+(s.feeAutoOn?'diaktifkan':'dinonaktifkan')):'✓ Aturan fee agen disimpan','ok');
-}
-
 // ══ ADMIN — AUDIT LOG ═══════════════════════════
 // ══ ADMIN — STATUS BACKUP ══════════════════════
 // ══ ADMIN — SINKRONISASI LAYAR CUSTOMER JARAK JAUH (Firebase) ══
@@ -3792,7 +3445,6 @@ function renderFirebaseSyncUI(){
   if(cfg){
     input.value=JSON.stringify(cfg,null,2);
     section.style.display='block';
-    watchFbConnected();
     document.getElementById('fbCabangLabel').textContent=session?session.label+' ('+session.user+')':'—';
     const url=remoteCustomerDisplayUrl();
     document.getElementById('fbRemoteUrl').textContent=url;
@@ -3809,138 +3461,23 @@ function copySetupUrl(){
   if(!url)return;
   navigator.clipboard.writeText(url).then(()=>toast('✓ Link setup disalin','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
 }
-// Parser toleran: menerima paste mentah dari Firebase Console, bukan cuma JSON murni.
-// Firebase Console biasanya kasih format JS: `const firebaseConfig = { apiKey: "...", ... };`
-// yang BUKAN JSON valid (key tanpa kutip, ada "const ... =", ada titik-koma di akhir, dll).
-// Fungsi ini membersihkan itu semua sebelum divalidasi.
-function parseFirebaseConfigLoose(raw){
-  let s=raw.trim();
-  // buang komentar // dan /* */ (kalau ada yg ke-copy)
-  s=s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
-  // buang prefix seperti "const firebaseConfig =", "let x=", "var x =", "export default"
-  s=s.replace(/^\s*(export\s+default\s*|(const|let|var)\s+\w+\s*=\s*)/,'');
-  // buang titik-koma di akhir
-  s=s.trim().replace(/;\s*$/,'');
-  // ambil hanya bagian {...} pertama kalau ada teks lain nyangkut
-  const m=s.match(/\{[\s\S]*\}/);
-  if(m)s=m[0];
-  // 1) coba langsung sebagai JSON murni
-  try{return JSON.parse(s)}catch(e){}
-  // 2) bersihkan: kasih kutip ke key yg belum berkutip, hapus trailing comma
-  let cleaned=s
-    .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":') // key: -> "key":
-    .replace(/'/g,'"') // single quote -> double quote
-    .replace(/,\s*([}\]])/g,'$1'); // hapus trailing comma sebelum } atau ]
-  try{return JSON.parse(cleaned)}catch(e){}
-  // 3) fallback terakhir: evaluasi sebagai literal objek JS (input milik admin sendiri, lokal)
-  try{
-    // eslint-disable-next-line no-new-func
-    const obj=(new Function('return ('+s+')'))();
-    if(obj&&typeof obj==='object')return obj;
-  }catch(e){}
-  return null;
-}
-// ══ UJI KONEKSI & AUTO-DETEKSI ALAMAT DATABASE ═══════════════════
-// Firebase Console versi baru sering TIDAK menyertakan "databaseURL" di config-nya
-// sama sekali (itulah kenapa penyimpanan config sering gagal). Solusinya: kita tebak
-// sendiri alamat database dari projectId (semua pola resmi Firebase), lalu UJI
-// baca-tulis sungguhan ke tiap kandidat — yang berhasil itulah yang dipakai.
-function fbCandidateUrls(cfg){
-  const urls=[];
-  if(cfg.databaseURL)urls.push(cfg.databaseURL.replace(/\/+$/,''));
-  const pid=cfg.projectId;
-  if(pid){
-    urls.push('https://'+pid+'-default-rtdb.asia-southeast1.firebasedatabase.app'); // region Singapura — paling umum utk Indonesia
-    urls.push('https://'+pid+'-default-rtdb.firebaseio.com');                       // region default AS
-    urls.push('https://'+pid+'-default-rtdb.europe-west1.firebasedatabase.app');
-    urls.push('https://'+pid+'.firebaseio.com');                                    // pola lama
-  }
-  return [...new Set(urls)];
-}
-function fbRestTest(baseUrl){
-  // Uji TULIS sungguhan (bukan cuma ping) — kalau rules menolak, kita tahu persis.
-  const clean=baseUrl.replace(/\/+$/,'');
-  const ctrl=new AbortController();
-  const t=setTimeout(()=>ctrl.abort(),8000);
-  return fetch(clean+'/brilink_sync/__tes_koneksi__.json',{method:'PUT',body:JSON.stringify({ts:Date.now()}),signal:ctrl.signal})
-    .then(async res=>{
-      clearTimeout(t);
-      if(res.ok)return{ok:true,url:clean};
-      let body='';try{body=await res.text()}catch(e){}
-      if(res.status===401||res.status===403||/permission/i.test(body))return{ok:false,reason:'rules',url:clean};
-      if(res.status===404)return{ok:false,reason:'notfound',url:clean};
-      return{ok:false,reason:'http'+res.status,url:clean};
-    })
-    .catch(()=>{clearTimeout(t);return{ok:false,reason:'network',url:clean}});
-}
-function setFbStatus(msg,type){
-  const el=document.getElementById('fbConnStatus');
-  if(!el)return;
-  el.style.display='block';
-  el.innerHTML=msg;
-  const map={ok:['var(--emerald-lt)','var(--emerald-700)','#bfe8d2'],err:['var(--rose-lt)','var(--rose-700)','#f3caca'],wait:['var(--amber-lt)','var(--amber-600)','#efdcae']};
-  const c=map[type]||map.wait;
-  el.style.background=c[0];el.style.color=c[1];el.style.border='1px solid '+c[2];
-}
-let _fbConnWatchActive=false;
-function watchFbConnected(){
-  const db=initFirebaseIfPossible();
-  if(!db||_fbConnWatchActive)return;
-  _fbConnWatchActive=true;
-  try{
-    db.ref('.info/connected').on('value',snap=>{
-      if(snap.val()===true)setFbStatus('🟢 <b>Terhubung ke database internet</b> — semua data otomatis tersimpan di cloud & tersinkron real-time ke semua device.','ok');
-      else setFbStatus('🟡 <b>Sedang offline / menyambung ulang…</b> Data tetap tercatat di device ini dan otomatis diunggah begitu internet kembali.','wait');
-    });
-  }catch(e){}
-}
-async function saveFirebaseConfigUI(){
-  const btn=document.getElementById('fbSaveBtn');
+function saveFirebaseConfigUI(){
   const raw=document.getElementById('fbConfigInput').value.trim();
   if(!raw){toast('Tempel dulu config Firebase-nya','err');return}
-  const cfg=parseFirebaseConfigLoose(raw);
-  if(!cfg){setFbStatus('❌ Format config tidak dikenali. Pastikan Anda menyalin <b>seluruh blok {...}</b> dari Firebase Console (boleh apa adanya, termasuk tulisan "const firebaseConfig =").','err');toast('Format config tidak dikenali','err');return}
-  if(!cfg.projectId&&!cfg.databaseURL){setFbStatus('❌ Config ini tidak punya <b>projectId</b> maupun <b>databaseURL</b> — sepertinya yang di-copy bukan config Firebase. Ulangi copy dari Firebase Console → Project Settings → bagian "SDK setup and configuration".','err');toast('Config tidak lengkap','err');return}
-  if(btn){btn.disabled=true;btn.textContent='⏳ Menguji koneksi…'}
-  setFbStatus('⏳ Menguji koneksi ke database internet… (mencoba beberapa alamat server otomatis)','wait');
-  const candidates=fbCandidateUrls(cfg);
-  let found=null,rulesUrl=null;
-  for(const u of candidates){
-    setFbStatus('⏳ Menguji: <span style="font-family:var(--mono)">'+u+'</span> …','wait');
-    const r=await fbRestTest(u);
-    if(r.ok){found=r.url;break}
-    if(r.reason==='rules'&&!rulesUrl)rulesUrl=r.url;
-  }
-  if(btn){btn.disabled=false;btn.textContent='💾 Simpan & Uji Koneksi'}
-  if(!found){
-    if(rulesUrl){
-      setFbStatus('❌ Database <b>ditemukan</b> di <span style="font-family:var(--mono)">'+rulesUrl+'</span> tapi <b>akses ditolak (Rules belum diizinkan)</b>.<br>Perbaiki: buka <b>Firebase Console → Build → Realtime Database → tab Rules</b>, ganti isinya sesuai contoh di bagian "Wajib update Rules" di atas, klik <b>Publish</b>, lalu klik Simpan lagi di sini.','err');
-      toast('Rules database belum diizinkan — lihat petunjuk di bawah kolom','err');
-    }else{
-      setFbStatus('❌ Tidak menemukan Realtime Database untuk project <b>'+(cfg.projectId||'?')+'</b>.<br>Penyebab paling umum: <b>Realtime Database belum dibuat</b>. Perbaiki: buka <b>Firebase Console → Build → Realtime Database → Create Database</b> (pilih lokasi mana saja, mode apa saja — nanti Rules diatur sesuai contoh di atas). Setelah itu klik Simpan lagi di sini. Pastikan juga internet komputer ini nyala.','err');
-      toast('Realtime Database belum dibuat / tidak terjangkau','err');
-    }
-    return;
-  }
-  cfg.databaseURL=found; // simpan alamat yang TERBUKTI jalan
+  let cfg;
+  try{cfg=JSON.parse(raw)}catch(e){toast('Format JSON tidak valid — cek lagi copy-paste-nya dari Firebase Console','err');return}
+  if(!cfg.databaseURL){toast('Config ini tidak punya "databaseURL" — pastikan Realtime Database sudah dibuat di Firebase Console','err');return}
   setFirebaseConfig(cfg);
-  resetFirebaseApp();
-  initFirebaseIfPossible(cfg);
+  fbApp=null;fbDb=null; // reset supaya re-init pakai config baru
   renderFirebaseSyncUI();
-  logAudit('SET_FIREBASE_CONFIG','Sinkronisasi database internet diaktifkan ('+found+') oleh '+(session?session.nama:'-'));
-  toast('✓ Terhubung ke database internet','ok');
-  setFbStatus('✅ Terhubung ke <span style="font-family:var(--mono)">'+found+'</span> — mengunggah data lokal ke cloud…','ok');
-  // Langsung aktif tanpa perlu login ulang: tarik data cloud → unggah data lokal → dengarkan real-time
-  _cloudListenerActive=false;
-  tryStartCloudSync(()=>{});
+  logAudit('SET_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh diaktifkan oleh '+session.nama);
+  toast('✓ Konfigurasi tersimpan — Layar Customer siap dipakai di device terpisah','ok');
 }
 function removeFirebaseConfigUI(){
-  if(!confirm('Hapus konfigurasi sinkronisasi database internet? Device ini akan kembali menyimpan data sendiri-sendiri (tidak tersambung device lain).'))return;
+  if(!confirm('Hapus konfigurasi sinkronisasi jarak jauh? Layar customer di tablet/HP akan berhenti tersambung.'))return;
   clearFirebaseConfig();
-  resetFirebaseApp();
-  _fbConnWatchActive=false;
+  fbApp=null;fbDb=null;
   document.getElementById('fbConfigInput').value='';
-  const st=document.getElementById('fbConnStatus');if(st)st.style.display='none';
   renderFirebaseSyncUI();
   logAudit('HAPUS_FIREBASE_CONFIG','Sinkronisasi Layar Customer jarak jauh dinonaktifkan oleh '+session.nama);
   toast('Konfigurasi dihapus','ok');
@@ -3949,6 +3486,98 @@ function copyRemoteUrl(){
   const url=document.getElementById('fbRemoteUrl').textContent;
   if(!url)return;
   navigator.clipboard.writeText(url).then(()=>toast('✓ Link disalin ke clipboard','ok')).catch(()=>toast('Gagal menyalin, salin manual saja','err'));
+}
+// ══ MONITOR KESEHATAN PENYIMPANAN (penting untuk 10 cabang jangka panjang) ══
+// localStorage browser terbatas (~5MB). Kalau transaksi menumpuk bertahun-tahun tanpa
+// dibersihkan, suatu saat bisa penuh & aplikasi berhenti menyimpan. Fungsi ini menghitung
+// pemakaian & memberi peringatan dini jauh sebelum penuh, plus tombol arsip data lama.
+function estimateStorageUsage(){
+  let total=0;
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    const v=localStorage.getItem(k)||'';
+    total+=k.length+v.length;
+  }
+  return total*2; // perkiraan byte (UTF-16, ~2 byte/char)
+}
+function countUserTrx(){
+  const prefix='bl_trx_'+session.user+'_';
+  let n=0;
+  Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
+    try{n+=JSON.parse(localStorage.getItem(k)).length}catch(e){}
+  });
+  return n;
+}
+function renderStorageHealth(){
+  const el=document.getElementById('storageHealthCard');
+  if(!el)return;
+  const used=estimateStorageUsage();
+  const usedMB=(used/1048576);
+  const limitMB=5; // asumsi konservatif batas per-origin
+  const pct=Math.min(100,Math.round(usedMB/limitMB*100));
+  const trxCount=countUserTrx();
+  let cls='ok',icon='✅',msg='Penyimpanan sehat.';
+  if(pct>=85){cls='danger';icon='⚠️';msg='Penyimpanan hampir penuh! Segera arsipkan data lama agar aplikasi tidak berhenti menyimpan.';}
+  else if(pct>=65){cls='warn';icon='🟡';msg='Penyimpanan mulai terisi banyak. Pertimbangkan arsip data lama.';}
+  el.className='backup-status-card '+cls;
+  document.getElementById('storageHealthIcon').textContent=icon;
+  document.getElementById('storageHealthTitle').textContent='Penyimpanan: '+usedMB.toFixed(2)+' MB terpakai (~'+pct+'%) · '+trxCount.toLocaleString('id-ID')+' transaksi tersimpan';
+  document.getElementById('storageHealthSub').textContent=msg;
+}
+// Arsip data lama: transaksi & pemindahan yang lebih lama dari N hari dipindahkan ke file
+// unduhan (JSON), lalu dihapus dari localStorage supaya browser lega. Saldo TIDAK terpengaruh
+// karena sebelum menghapus, kita "kunci" saldo berjalan saat ini sebagai saldo awal baru.
+// Fungsi INTI arsip — tanpa dialog konfirmasi, dipakai baik oleh tombol manual maupun
+// proses OTOMATIS. silent=true berarti dipanggil otomatis (tanpa tanya, langsung jalan).
+function jalankanArsip(hariThreshold){
+  hariThreshold=hariThreshold||90;
+  const batas=new Date();batas.setDate(batas.getDate()-hariThreshold);
+  const batasISO=batas.toISOString().slice(0,10);
+  const arsip={};let jumlahArsip=0;
+  ['bl_trx_'+session.user+'_','bl_pindah_'+session.user+'_'].forEach(prefix=>{
+    Object.keys(localStorage).filter(k=>k.startsWith(prefix)).forEach(k=>{
+      const tgl=k.slice(prefix.length);
+      if(tgl<batasISO){
+        arsip[k]=localStorage.getItem(k);
+        try{jumlahArsip+=JSON.parse(localStorage.getItem(k)).length}catch(e){}
+      }
+    });
+  });
+  if(jumlahArsip===0){
+    toast('Tidak ada data lebih lama dari '+hariThreshold+' hari untuk dibersihkan','ok');
+    return false;
+  }
+  // Kalau sinkronisasi cloud (Firebase) sudah aktif, data transaksi ini SUDAH tersimpan
+  // permanen di sana sejak awal (tiap transaksi otomatis terkirim real-time) — jadi
+  // TIDAK PERLU unduh file cadangan lagi, data tidak akan hilang meski dihapus dari sini.
+  // Kalau cloud belum diaktifkan, ini satu-satunya salinan — unduh dulu demi keamanan.
+  const cloudAktif=!!getFirebaseConfig();
+  const pesan=cloudAktif
+    ? 'Bersihkan '+jumlahArsip+' transaksi/pemindahan yang lebih lama dari '+hariThreshold+' hari dari penyimpanan LOKAL komputer ini?\n\nData ini SUDAH tersimpan permanen di cloud (Firebase) sejak awal — jadi TIDAK akan hilang, ini cuma membersihkan salinan lokal di komputer ini supaya lebih ringan. Saldo & kas TIDAK akan berubah.'
+    : 'Arsipkan '+jumlahArsip+' transaksi/pemindahan yang lebih lama dari '+hariThreshold+' hari?\n\n⚠️ Sinkronisasi cloud belum aktif, jadi ini satu-satunya salinan data tsb — sistem akan UNDUH file cadangan dulu sebelum menghapusnya dari sini. Saldo & kas TIDAK akan berubah.\n\nPastikan simpan baik-baik file arsip yang terunduh.';
+  if(!confirm(pesan))return false;
+  // 1. Kunci saldo berjalan sekarang sebagai titik awal baru (supaya angka tetap sama persis)
+  const k=hitungKas();const now=Date.now();
+  setKasFisikAwal(k.kasAkhir);setKasResetAt(now);
+  CHANNELS.forEach(ch=>{setSaldoAwal(ch,k.saldo[ch].akhir);setSaldoResetAt(ch,now)});
+  // 2. Unduh file cadangan HANYA kalau belum ada salinan lain (cloud belum aktif)
+  if(!cloudAktif){
+    const blob=new Blob([JSON.stringify(arsip,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    const d=new Date();
+    a.href=url;a.download='BRILink_Arsip_'+session.user+'_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
+    document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  }
+  // 3. Hapus dari penyimpanan lokal (aman: sudah ada di cloud, atau sudah terunduh)
+  Object.keys(arsip).forEach(key=>localStorage.removeItem(key));
+  invalidateScanCache();
+  logAudit('BERSIHKAN_LOKAL',jumlahArsip+' transaksi/pemindahan >'+hariThreshold+' hari dihapus dari penyimpanan lokal'+(cloudAktif?' (data tetap ada di cloud)':' (sudah diunduh sebagai cadangan)'));
+  loadData();render();renderKas();renderStorageHealth();
+  return jumlahArsip;
+}
+function arsipDataLama(hariThreshold){
+  const jumlah=jalankanArsip(hariThreshold);
+  if(jumlah)toast('✓ '+jumlah+' data lama dibersihkan dari penyimpanan lokal. Saldo tetap sama, data tetap aman.','ok');
 }
 function renderBackupStatus(){
   const card=document.getElementById('backupStatusCard');
