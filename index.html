@@ -1078,7 +1078,7 @@ tr:hover td{background:#FAFBFF}
 
           <div class="filter-card" style="margin-bottom:20px">
             <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">🌐 Sinkronisasi Multi-Device &amp; Layar Customer</div>
-            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">✅ <b>Otomatis aktif — tidak perlu setup apapun.</b> Config Firebase sudah tertanam di dalam aplikasi ini, jadi device baru manapun (komputer/tablet lain) yang membuka aplikasi ini <b>langsung tersinkron otomatis</b> begitu login, tanpa perlu tempel config atau buka link setup segala. Manfaatnya:<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> otomatis melihat data yang sama, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa langsung dipakai di tablet/HP terpisah — cukup scan QR di bawah.<br><br>Bagian di bawah ini (bikin akun Firebase sendiri, tempel config manual) <b>tidak wajib dibuka</b> — cuma untuk situasi khusus kalau suatu saat kamu perlu pindah ke project Firebase yang berbeda.</div>
+            <div style="font-size:12px;color:var(--ink-600);line-height:1.8;margin-bottom:14px">✅ <b>Sepenuhnya otomatis — tidak perlu klik atau setup apapun.</b> Config Firebase sudah tertanam di dalam aplikasi ini, jadi device baru manapun (komputer/tablet lain) yang membuka aplikasi ini <b>langsung tersinkron otomatis</b> begitu login. Ini termasuk riwayat transaksi LAMA yang sudah ada di komputer itu sebelum sinkronisasi aktif — otomatis ikut terkirim ke cloud satu kali di latar belakang, tanpa perlu ada yang klik apapun. Manfaatnya:<br>1️⃣ <b>Login akun cabang yang sama di device manapun</b> otomatis melihat data yang sama, termasuk riwayat lamanya, tersinkron real-time.<br>2️⃣ <b>Layar Customer</b> bisa langsung dipakai di tablet/HP terpisah — cukup scan QR di bawah.<br><br>Bagian di bawah ini (bikin akun Firebase sendiri, tempel config manual) <b>tidak wajib dibuka</b> — cuma untuk situasi khusus kalau suatu saat kamu perlu pindah ke project Firebase yang berbeda.</div>
 
             <details style="margin-bottom:14px">
               <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue-600)">📋 (Opsional/lanjutan) Cara bikin akun Firebase sendiri kalau perlu ganti project</summary>
@@ -2138,6 +2138,60 @@ function bulkMergeCloudSnapshot(val,doneFn){
   if(jobs.length===0){doneFn();return}
   langkah();
 }
+// ══ KIRIM DATA LAMA KE CLOUD (sekali jalan) ═══════════════════════════
+// PENTING: kalau device ini sudah punya transaksi SEBELUM sinkronisasi cloud aktif,
+// transaksi lama itu TIDAK OTOMATIS ikut terkirim — cuma transaksi BARU (sejak sinkron
+// aktif) yang otomatis terkirim. Fungsi ini membaca SEMUA data yang ada di device ini
+// sekarang dan mengirimkannya ke cloud satu kali, supaya device lain juga bisa melihatnya.
+// Dijalankan sedikit-sedikit dengan jeda supaya tidak membebani browser walau datanya banyak.
+function backfillLocalDataToCloud(onDone){
+  if(!session)return;
+  const jobs=[];
+  // Transaksi (semua hari)
+  const trxPrefix='bl_trx_'+session.user+'_';
+  Object.keys(localStorage).filter(k=>k.startsWith(trxPrefix)).forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)).forEach(r=>{
+      if(r&&r.ts)jobs.push(()=>pushCloudRecord('trx',r.ts,r));
+    })}catch(e){}
+  });
+  // Pemindahan (semua hari)
+  const pindahPrefix='bl_pindah_'+session.user+'_';
+  Object.keys(localStorage).filter(k=>k.startsWith(pindahPrefix)).forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)).forEach(r=>{
+      if(r&&r.ts)jobs.push(()=>pushCloudRecord('pindah',r.ts,r));
+    })}catch(e){}
+  });
+  // Member
+  try{getMembers().forEach(m=>{if(m&&m.id)jobs.push(()=>pushCloudRecord('members',m.id,m))})}catch(e){}
+  // Audit log
+  try{JSON.parse(localStorage.getItem('bl_audit')||'[]').forEach(entry=>{
+    if(entry&&entry.ts)jobs.push(()=>pushCloudRecord('audit',entry.ts,entry));
+  })}catch(e){}
+  // Redeem poin
+  try{JSON.parse(localStorage.getItem('bl_redemptions')||'[]').forEach(entry=>{
+    if(entry&&entry.ts)jobs.push(()=>pushCloudRecord('redeem',entry.ts,entry));
+  })}catch(e){}
+  // Kas/saldo/settings/akun (state kecil)
+  jobs.push(()=>pushCloudState());
+
+  const total=jobs.length;
+  let i=0;
+  const CHUNK=5;
+  function langkah(){
+    const batas=Math.min(i+CHUNK,jobs.length);
+    for(;i<batas;i++){
+      try{jobs[i]()}catch(e){console.warn('Backfill job error:',e)}
+    }
+    if(i<jobs.length){
+      if(onDone)onDone(false,i,total); // progres
+      setTimeout(langkah,0);
+    } else {
+      if(onDone)onDone(true,total,total); // selesai
+    }
+  }
+  if(jobs.length===0){if(onDone)onDone(true,0,0);return}
+  langkah();
+}
 // Dipakai saat login gagal secara lokal — mungkin akun ini baru dibuat di device lain,
 // jadi coba tarik daftar akun terbaru dari cloud sebelum menyerah.
 function pullAccountsForLogin(user,callback){
@@ -2445,7 +2499,9 @@ function startApp(){
   // Sekarang urutannya dibalik: render dengan data LOKAL dulu (langsung, instan, tidak peduli
   // internet), baru sinkron cloud jalan di LATAR BELAKANG tanpa menahan apapun di layar.
   finishStartApp();
-  tryStartCloudSync(function(){/* selesai di latar belakang, tidak perlu render ulang paksa di sini — listener yang mengurus data baru */});
+  tryStartCloudSync(function(){
+    checkAutoBackfill(); // kirim data lama otomatis kalau device ini belum pernah — sekali per device, tanpa klik apapun
+  });
 }
 function finishStartApp(){
   loadData();buildJenisGrid();updateNoTrx();render();renderMembers();renderKas();tick();
@@ -3604,6 +3660,23 @@ function saveLimitSetting(){
 // ══ ADMIN — AUDIT LOG ═══════════════════════════
 // ══ ADMIN — STATUS BACKUP ══════════════════════
 // ══ ADMIN — SINKRONISASI LAYAR CUSTOMER JARAK JAUH (Firebase) ══
+// ══ KIRIM DATA LAMA KE CLOUD — OTOMATIS, SEKALI PER DEVICE, TANPA KLIK APAPUN ══
+// Ditandai per-device (localStorage) supaya cuma jalan SEKALI seumur hidup device itu,
+// tidak berulang tiap login (efisien) dan tidak butuh interaksi apapun dari siapapun.
+function backfillDoneKey(){return'bl_backfill_done_'+session.user}
+function checkAutoBackfill(){
+  if(!session||!getFirebaseConfig())return;
+  if(localStorage.getItem(backfillDoneKey()))return; // sudah pernah, tidak perlu lagi
+  backfillLocalDataToCloud((selesai,i,total)=>{
+    if(selesai){
+      localStorage.setItem(backfillDoneKey(),String(Date.now()));
+      if(total>0){
+        logAudit('BACKFILL_OTOMATIS',total+' catatan lama dari device ini otomatis dikirim ke cloud');
+        toast('☁️ '+total+' data lama dari device ini otomatis disinkronkan ke cloud','ok');
+      }
+    }
+  });
+}
 function renderFirebaseSyncUI(){
   const cfg=getFirebaseConfig();
   const input=document.getElementById('fbConfigInput');
