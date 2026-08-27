@@ -1950,7 +1950,7 @@ function tryStartCloudSync(onDone,tries){
   if(typeof firebase==='undefined'&&tries<50){setTimeout(()=>tryStartCloudSync(onDone,tries+1),200);return}
   const db=initFirebaseIfPossible(cfg);
   if(!db){onDone();return}
-  toast('🔄 Menyinkronkan data dari cloud...','ok');
+  toast('🔄 Menyinkronkan data terbaru di latar belakang (aplikasi tetap bisa dipakai)...','ok');
   // PENGAMAN ANTI-FREEZE (lapis 1): apapun yang terjadi, aplikasi WAJIB lanjut dalam maks 6 detik
   // kalau tarik-data dari cloud sendiri lambat/nyangkut (mis. internet buruk).
   let done=false;
@@ -2382,7 +2382,13 @@ function startApp(){
   document.getElementById('topUserSub').textContent=session.label+(session.role==='admin'?' · Admin':'');
   document.getElementById('topAvatar').textContent=session.nama.charAt(0).toUpperCase();
   document.getElementById('navAdmin').style.display=session.role==='admin'?'flex':'none';
-  tryStartCloudSync(finishStartApp);
+  // PERBAIKAN PENTING: aplikasi TIDAK PERNAH menunggu cloud lagi untuk terbuka — dulu di sini
+  // kita menunggu tryStartCloudSync() selesai dulu baru merender tampilan (finishStartApp),
+  // jadi kalau cloud lambat/nyangkut, seluruh aplikasi ikut menggantung menampilkan "Menyinkronkan...".
+  // Sekarang urutannya dibalik: render dengan data LOKAL dulu (langsung, instan, tidak peduli
+  // internet), baru sinkron cloud jalan di LATAR BELAKANG tanpa menahan apapun di layar.
+  finishStartApp();
+  tryStartCloudSync(function(){/* selesai di latar belakang, tidak perlu render ulang paksa di sini — listener yang mengurus data baru */});
 }
 function finishStartApp(){
   loadData();buildJenisGrid();updateNoTrx();render();renderMembers();renderKas();tick();
