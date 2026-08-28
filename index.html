@@ -1062,6 +1062,13 @@ tr:hover td{background:#FAFBFF}
           </div>
           <div style="font-size:11px;color:var(--ink-400);margin:-6px 0 16px;line-height:1.7">☁️ <b>Data kamu sudah aman di cloud, tidak perlu unduh manual:</b> kalau sinkronisasi Firebase sudah diaktifkan, setiap transaksi otomatis tersimpan permanen di internet sejak awal — <b>bukan cuma di komputer ini</b>. Jadi data <b>tidak akan pernah hilang</b> hanya karena penyimpanan lokal dibersihkan.<br><br>Tombol di samping cuma untuk membersihkan <b>salinan lokal</b> di komputer ini kalau penyimpanan browser mulai penuh (lihat status di atas) — sepenuhnya <b>opsional, tidak wajib dan tidak otomatis</b>. Data yang lebih lama dari 90 hari akan dihapus dari komputer ini saja (bukan dari cloud), supaya browser tetap ringan. Saldo, kas, dan poin member dijamin tidak berubah. Kalau sinkronisasi cloud belum aktif, sistem akan mengunduh file cadangan dulu sebelum membersihkan, sebagai jaring pengaman.</div>
 
+          <div class="filter-card" style="margin-bottom:20px;border:1.5px solid var(--emerald-lt)">
+            <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:8px">🛡️ Perlindungan Data Member (Sangat Penting)</div>
+            <div style="font-size:11.5px;color:var(--ink-600);line-height:1.7;margin-bottom:12px">Member <b>tidak pernah benar-benar dihapus</b> dari sistem ini. Kalau ada yang klik "Hapus" pada member (sengaja atau tidak sengaja), datanya cuma <b>disembunyikan</b> — poin, riwayat, dan semua datanya tetap tersimpan aman, dan bisa dikembalikan kapan saja dari sini. Ini sengaja dibuat begini karena data member terlalu berharga untuk berisiko hilang permanen akibat satu kesalahan klik atau gangguan teknis apapun.</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--ink-800);margin-bottom:8px">🗑️ Member yang Disembunyikan (bisa dikembalikan)</div>
+            <div id="memberTrashList" style="max-height:260px;overflow-y:auto"></div>
+          </div>
+
           <div class="filter-card" style="margin-bottom:20px">
             <div style="font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink-950);margin-bottom:10px">☁️ (Opsional) Supaya Backup Manual Otomatis Masuk ke Google Drive</div>
             <div style="font-size:12px;color:var(--ink-600);line-height:1.9">
@@ -2026,20 +2033,20 @@ function startCloudSyncListener(){
   _cloudListenerActive=true;
   const base=cloudBase();
   const now=Date.now();
-  const cutoffTrx=now-90*86400000;
   const cutoffAudit=now-30*86400000;
-  // Dibatasi rentang tanggal juga di sini (sama seperti tarik data awal) — supaya listener
-  // tidak mendengarkan/menyemburkan SELURUH riwayat, cukup yang relevan untuk operasional harian.
-  db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.trx.push(snap.val());clqSchedule()});
-  db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).on('child_changed',snap=>{_clq.trx.push(snap.val());clqSchedule()});
+  // Transaksi, pemindahan, & redeem TIDAK dibatasi tanggal (lihat catatan di tryStartCloudSync)
+  // — data keuangan harus lengkap 100%, bukan cuma yang "cukup relevan". Log audit saja
+  // yang masih dibatasi karena sekadar catatan aktivitas, bukan data keuangan.
+  db.ref(base+'/trx').on('child_added',snap=>{_clq.trx.push(snap.val());clqSchedule()});
+  db.ref(base+'/trx').on('child_changed',snap=>{_clq.trx.push(snap.val());clqSchedule()});
   db.ref(base+'/trx').on('child_removed',snap=>{const v=snap.val();if(v)removeTrxRecordLocal(v.tgl,v.ts)});
-  db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
-  db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).on('child_changed',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
+  db.ref(base+'/pindah').on('child_added',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
+  db.ref(base+'/pindah').on('child_changed',snap=>{_clq.pindah.push(snap.val());clqSchedule()});
   db.ref(base+'/members').on('child_added',snap=>{_clq.members[snap.key]=snap.val();clqSchedule()});
   db.ref(base+'/members').on('child_changed',snap=>{_clq.members[snap.key]=snap.val();clqSchedule()});
   db.ref(base+'/members').on('child_removed',snap=>removeMemberRecordLocal(snap.key));
   db.ref(base+'/audit').orderByChild('ts').startAt(cutoffAudit).on('child_added',snap=>{_clq.audit.push(snap.val());clqSchedule()});
-  db.ref(base+'/redeem').orderByChild('ts').startAt(cutoffTrx).on('child_added',snap=>{_clq.redeem.push(snap.val());clqSchedule()});
+  db.ref(base+'/redeem').on('child_added',snap=>{_clq.redeem.push(snap.val());clqSchedule()});
   db.ref(cloudStatePath()).on('value',snap=>{
     const val=snap.val();
     if(!val||!val.data)return;
@@ -2070,24 +2077,25 @@ function tryStartCloudSync(onDone,tries){
     startCloudSyncListener();
   };
   const guard=setTimeout(()=>proceed(true),6000);
-  // ══ PERBAIKAN AKAR MASALAH (bukan tambal lagi) ══════════════════════════
-  // Dulu di sini kita tarik SELURUH riwayat sejak hari pertama pakai aplikasi — kalau
-  // sudah berbulan-bulan/tahunan data 10 cabang, ini yang bikin lambat/berat, BUKAN soal
-  // kuota atau biaya Firebase. Sekarang kita cuma minta data yang benar-benar perlu:
-  // transaksi & pemindahan 90 hari terakhir, log audit 30 hari terakhir (data lebih lama
-  // TETAP AMAN tersimpan permanen di cloud, cuma tidak diunduh ulang tiap login — persis
-  // seperti email lama yang tetap ada di server tanpa perlu diunduh semua tiap buka aplikasi).
+  // ══ PERBAIKAN AKAR MASALAH (revisi ke-2 — DATA HARUS 100% BENAR) ══════════════
+  // Sebelumnya kita batasi transaksi cuma 90 hari terakhir demi kecepatan. Tapi ini
+  // TERNYATA bikin transaksi lebih lama dari itu tidak pernah ikut tersinkron ke device
+  // lain — untuk data KEUANGAN, ini tidak bisa diterima, akurasi jauh lebih penting
+  // daripada beberapa detik kecepatan. Sekarang transaksi, pemindahan, & redeem poin
+  // ditarik LENGKAP TANPA BATAS TANGGAL — kecepatan tetap terjaga karena pemrosesannya
+  // sudah dikelompokkan & dicicil (lihat bulkMergeCloudSnapshot), BUKAN karena datanya
+  // dipotong. Cuma log audit (sekadar catatan aktivitas, bukan data keuangan) yang masih
+  // dibatasi supaya tidak membengkak tanpa perlu.
   const base=cloudBase();
   const now=Date.now();
-  const cutoffTrx=now-90*86400000;
   const cutoffAudit=now-30*86400000;
   Promise.all([
     db.ref(base+'/state').once('value'),
     db.ref(base+'/members').once('value'),
-    db.ref(base+'/trx').orderByChild('ts').startAt(cutoffTrx).once('value'),
-    db.ref(base+'/pindah').orderByChild('ts').startAt(cutoffTrx).once('value'),
+    db.ref(base+'/trx').once('value'),
+    db.ref(base+'/pindah').once('value'),
     db.ref(base+'/audit').orderByChild('ts').startAt(cutoffAudit).once('value'),
-    db.ref(base+'/redeem').orderByChild('ts').startAt(cutoffTrx).once('value'),
+    db.ref(base+'/redeem').once('value'),
   ]).then(([stateSnap,membersSnap,trxSnap,pindahSnap,auditSnap,redeemSnap])=>{
     clearTimeout(guard);
     const val={
@@ -2599,15 +2607,20 @@ function showPage(p){
   if(p==='member')renderMembers();
   if(p==='kas')renderKas();
   if(p==='laporan')renderLaporan();
-  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();renderStorageHealth();}
+  if(p==='admin'){renderAdminAccounts();renderAuditLog();renderBackupStatus();renderFirebaseSyncUI();renderStorageHealth();renderMemberTrash();}
 }
 
 // ══ MEMBER DB ══════════════════════════════════
 function getMembers(){const r=localStorage.getItem('bl_members_global');return r?JSON.parse(r):[]}
+// getMembers() SENGAJA tidak menyaring member yang "dihapus" (lihat catatan soft-delete di
+// deleteMember()) — supaya kode lain yang baca-ubah-simpan (poin, redeem, dll) tidak pernah
+// tanpa sengaja membuang member yang sudah dihapus secara permanen. Yang perlu tampilan
+// "bersih" (tanpa member terhapus) pakai getActiveMembers() di bawah ini.
+function getActiveMembers(){return getMembers().filter(m=>!m.deleted)}
 function saveMembers(a){localStorage.setItem('bl_members_global',JSON.stringify(a))}
 function getMemberById(id){return getMembers().find(m=>m.id===id)||null}
-function getMemberByRfid(rfid){return getMembers().find(m=>m.rfid===rfid)||null}
-function getMemberByHp(hp){return getMembers().find(m=>m.hp===hp)||null}
+function getMemberByRfid(rfid){return getActiveMembers().find(m=>m.rfid===rfid)||null}
+function getMemberByHp(hp){return getActiveMembers().find(m=>m.hp===hp)||null}
 function genRfid(){return'RF-'+Math.random().toString(36).substr(2,8).toUpperCase()}
 function getTier(p){if(p>=300)return'Diamond';if(p>=150)return'Platinum';if(p>=60)return'Gold';if(p>=20)return'Silver';return'Regular'}
 const TIER_INFO={
@@ -3395,8 +3408,53 @@ function saveMember(){
 }
 function deleteMember(id){
   const m=getMemberById(id);if(!m)return;
-  if(!confirm('Hapus member '+m.nama+'?'))return;
-  saveMembers(getMembers().filter(x=>x.id!==id));removeCloudRecord('members',id);renderMembers();toast('Member dihapus');
+  if(!confirm('Hapus member '+m.nama+'? (Datanya tetap aman tersimpan & bisa dikembalikan lewat Panel Admin kalau ternyata salah hapus)'))return;
+  // PENTING — soft-delete, BUKAN hapus sungguhan: data member (poin, riwayat, dll) tetap
+  // ada, cuma ditandai "dihapus" supaya tidak muncul di tampilan normal. Ini sengaja dibuat
+  // begini untuk data sepenting member: kalau pakai hapus permanen + sinkron real-time,
+  // satu kesalahan klik (atau bug apapun) bisa langsung menghapus member itu di SEMUA
+  // device sekaligus tanpa cara mengembalikan. Dengan soft-delete, selalu ada jalan pulih.
+  const members=getMembers();
+  const idx=members.findIndex(x=>x.id===id);
+  if(idx>=0){
+    members[idx].deleted=true;
+    members[idx].deletedAt=Date.now();
+    members[idx].deletedBy=session.nama;
+    saveMembers(members);
+    pushCloudRecord('members',id,members[idx]); // update biasa (set), BUKAN remove — tidak memicu hapus-berantai
+  }
+  renderMembers();
+  toast('Member disembunyikan (datanya tetap aman, bisa dikembalikan di Panel Admin)');
+}
+function restoreMember(id){
+  const members=getMembers();
+  const idx=members.findIndex(x=>x.id===id);
+  if(idx<0)return;
+  delete members[idx].deleted;
+  delete members[idx].deletedAt;
+  delete members[idx].deletedBy;
+  saveMembers(members);
+  pushCloudRecord('members',id,members[idx]);
+  renderMemberTrash();
+  renderMembers();
+  toast('✓ Member berhasil dikembalikan','ok');
+}
+function renderMemberTrash(){
+  const wrap=document.getElementById('memberTrashList');
+  if(!wrap)return;
+  const deleted=getMembers().filter(m=>m.deleted);
+  if(!deleted.length){
+    wrap.innerHTML='<div style="font-size:11.5px;color:var(--ink-400);padding:8px 0">Tidak ada member yang terhapus.</div>';
+    return;
+  }
+  wrap.innerHTML=deleted.map(m=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--ink-100)">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink-800)">${m.nama}</div>
+        <div style="font-size:11px;color:var(--ink-400)">${m.hp||'-'} · Dihapus ${m.deletedAt?new Date(m.deletedAt).toLocaleString('id-ID'):'-'} oleh ${m.deletedBy||'-'}</div>
+      </div>
+      <button class="btn-clr" style="padding:6px 12px;font-size:11.5px" onclick="restoreMember('${m.id}')">↩️ Kembalikan</button>
+    </div>`).join('');
 }
 function getRedemptions(){const r=localStorage.getItem('bl_redemptions');return r?JSON.parse(r):[]}
 function saveRedemptions(a){localStorage.setItem('bl_redemptions',JSON.stringify(a))}
@@ -3484,12 +3542,12 @@ function maskRfid(rfid){
 function renderMembers(){
   const q=(document.getElementById('mSearch').value||'').toLowerCase();
   const tf=document.getElementById('mTier').value;
-  let members=getMembers();
+  let members=getActiveMembers();
   if(q)members=members.filter(m=>m.nama.toLowerCase().includes(q)||m.hp.includes(q)||m.rfid.toLowerCase().includes(q));
   if(tf)members=members.filter(m=>getTier(m.poin)===tf);
   const grid=document.getElementById('memberGrid');
   if(!members.length){
-    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:var(--ink-400)"><div style="font-size:40px;opacity:.3;margin-bottom:12px">💳</div><div style="font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink-500)">${getMembers().length?'Tidak ada member yang cocok':'Belum ada member terdaftar'}</div><div style="font-size:13px;margin-top:4px">Klik "+ Tambah Member" untuk mendaftarkan pelanggan</div></div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:var(--ink-400)"><div style="font-size:40px;opacity:.3;margin-bottom:12px">💳</div><div style="font-family:var(--serif);font-size:16px;font-weight:600;color:var(--ink-500)">${getActiveMembers().length?'Tidak ada member yang cocok':'Belum ada member terdaftar'}</div><div style="font-size:13px;margin-top:4px">Klik "+ Tambah Member" untuk mendaftarkan pelanggan</div></div>`;
     document.getElementById('memberPager').innerHTML='';
     return;
   }
@@ -3539,7 +3597,7 @@ function renderMembers(){
 
 // ══ SIM RFID ═══════════════════════════════════
 function openSimRfid(){
-  const members=getMembers();
+  const members=getActiveMembers();
   const list=document.getElementById('simRfidList');
   if(!members.length){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink-400)">Belum ada member terdaftar</div>';}
   else {
@@ -3724,11 +3782,29 @@ function checkAutoBackfill(){
     if(selesai){
       localStorage.setItem(backfillDoneKey(),String(Date.now()));
       if(total>0){
-        logAudit('BACKFILL_OTOMATIS',total+' catatan lama dari device ini otomatis dikirim ke cloud');
-        toast('☁️ '+total+' data lama dari device ini otomatis disinkronkan ke cloud','ok');
+        logAudit('BACKFILL_OTOMATIS',total+' catatan lama dari device ini dimasukkan ke antrian kirim ke cloud');
+        toast('☁️ Mengirim '+total+' data lama ke cloud di latar belakang...','ok');
+        // PENTING: "dimasukkan ke antrian" BEDA dengan "sudah pasti sampai di cloud".
+        // Untuk data sebanyak ini, pengiriman sungguhan butuh waktu nyata (bukan instan) —
+        // baru kasih tahu "benar-benar selesai" setelah antrian pengiriman betul-betul kosong
+        // (semua terkonfirmasi terkirim), bukan cuma sekadar dimasukkan ke antrian.
+        waitForCPQEmpty(total);
       }
     }
   });
+}
+function waitForCPQEmpty(total,elapsedSec){
+  elapsedSec=elapsedSec||0;
+  const sisa=loadCPQ().length;
+  if(sisa===0){
+    toast('✅ Selesai — '+total+' data lama benar-benar sudah sampai di cloud','ok');
+    return;
+  }
+  if(elapsedSec>=120){ // 2 menit — kasih tahu jujur kalau masih berjalan, bukan gagal
+    toast('⏳ Masih mengirim sisa data ('+sisa+' lagi) — proses tetap berjalan sendiri di belakang layar, boleh ditinggal','ok');
+    return;
+  }
+  setTimeout(()=>waitForCPQEmpty(total,elapsedSec+3),3000);
 }
 function renderFirebaseSyncUI(){
   const cfg=getFirebaseConfig();
@@ -3960,7 +4036,7 @@ function exportExcel(){
   toast('✓ File Excel berhasil diunduh','ok');
 }
 function exportMemberExcel(){
-  const members=getMembers();
+  const members=getActiveMembers();
   if(!members.length){toast('Belum ada data member','err');return}
   const wb=XLSX.utils.book_new();
   const hdr=['ID Member','Nama','No HP','ID Kartu RFID','Tier','Total Poin','Total Transaksi','Total Nominal (Rp)','Tgl Lahir','Alamat','Tgl Daftar'];
